@@ -27,12 +27,16 @@ work is still in progress.
 
 ## Dependencies
 
-This crate can be used with just pure `bevy_ecs`. It optionally (enabled by
-default) depends on `bevy_core` to access the `Time` resource, used for the
-fixed timestep implementation.
+The "run conditions" functionality is always enabled, and depends only on
+`bevy_ecs`.
 
-You can build without default features to remove the fixed timestep stuff,
-and depend just on `bevy_ecs`.
+The "fixed timestep" functionality is optional (`"fixedtimestep"` cargo
+feature, enabled by default) and adds a dependency on `bevy_core`
+(needed for `Res<Time>`).
+
+The "states" functionality is optional (`"states"` cargo feature, enabled
+by default) and adds a dependency on `bevy_utils` (to use Bevy's preferred
+`HashMap` implementation).
 
 ## Run Conditions
 
@@ -164,4 +168,124 @@ Conditions](#run-conditions) from this crate instead! ;)
 
 ## States
 
-TODO WIP: Coming soon!
+(see `examples/menu.rs` for a complete example)
+
+This crate offers a states abstraction that works as follows:
+
+You create one (or more) state types, usually enums, just like when using
+Bevy States.
+
+However, here we track states using two resource types:
+ - `CurrentState(T)`: the current state you are in
+ - `NextState(T)`: insert this (using `Commands`) whenever you want to change state
+
+### Registering the state type, how to add enter/exit systems
+
+To "drive" the states, you add a `StateTransitionStage` to your `App`. This
+is a Stage that will take care of performing state transitions and managing
+`CurrentState<T>`. It being a separate stage allows you to control at what
+point in your App state transitions happen.
+
+You can add child stages to it, to run when entering or exiting different
+states. This is how you specify your "on enter/exit" systems. They are
+optional, you don't need them for every state value.
+
+When the transition stage runs, it will check if a `NextState` resource
+exists. If yes, it will remove it. If it contains a different value from
+the one in `CurrentState`, a transition will be performed:
+ - run the "exit stage" (if any) for the current state
+ - change the value of `CurrentState`
+ - run the "enter stage" (if any) for the next state
+
+### Triggering a Transition
+
+Please do not manually insert or remove `CurrentState<T>`. It should be managed
+entirely by `StateTransitionStage`. It will insert it when it first runs.
+
+If you want to perform a state transition, simply insert a `NextState<T>`.
+If you mutate `CurrentState<T>`, you will effectively force a transition
+without running the exit/enter systems (you probably don't want to do this).
+
+Multiple state transitions can be performed in a single frame, if you insert
+a new instance of `NextState` from within an exit/enter stage.
+
+### Update systems
+
+For the systems that you want to run every frame, we provide
+a `.run_in_state(state)` and `.run_not_in_state(state)` [run
+conditions](#run-conditions).
+
+You can add systems anywhere, to any stage (incl. behind [fixed
+timestep](#fixed-timestep)), and make them conditional on one or more states,
+using those helper methods.
+
+```rust
+use bevy::prelude::*;
+use iyes_loopless::prelude::*;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum GameState {
+    MainMenu,
+    InGame,
+}
+
+fn main() {
+    // prepare any stages for our transitions:
+
+    let mut enter_menu = SystemStage::parallel();
+    enter_menu.add_system(setup_menu);
+    // ...
+
+    let mut exit_menu = SystemStage::parallel();
+    exit_menu.add_system(despawn_menu);
+    // ...
+
+    let mut enter_game = SystemStage::parallel();
+    enter_game.add_system(setup_game);
+    // ...
+
+    // stage for anything we want to do on a fixed timestep
+    let mut fixedupdate = SystemStage::parallel();
+    fixedupdate.add_system(
+        fixed_thing
+            // only do it in-game
+            .into_conditional()
+            .run_in_state(GameState::InGame)
+    );
+
+    App::new()
+        .add_plugins(DefaultPlugins)
+        // Add the "driver" stage that will perform state transitions
+        // After `CoreStage::PreUpdate` is a good place to put it, so that
+        // all the states are settled before we run any of our own systems.
+        .add_stage_after(
+            CoreStage::PreUpdate,
+            "TransitionStage",
+            StateTransitionStage::new(GameState::MainMenu)
+                .with_enter_stage(GameState::MainMenu, enter_menu)
+                .with_exit_stage(GameState::MainMenu, exit_menu)
+                .with_enter_stage(GameState::InGame, enter_game)
+        )
+        // If we had more state types, we would add transition stages for them too...
+
+        // Add a FixedTimestep, cuz we can!
+        .add_stage_before(
+            CoreStage::Update,
+            "FixedUpdate",
+            FixedTimestepStage::from_stage(Duration::from_millis(125), fixedupdate)
+        )
+
+        // Add our various systems
+        .add_system(
+            menu_stuff
+                .into_conditional()
+                .run_in_state(GameState::MainMenu)
+        )
+        .add_system(
+            animate
+                .into_conditional()
+                .run_in_state(GameState::InGame)
+        )
+
+        .run();
+}
