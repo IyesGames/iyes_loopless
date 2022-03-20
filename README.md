@@ -89,6 +89,13 @@ fn notify_server(/* ... */) {
 It is highly recommended that all your condition systems only access data
 immutably. Avoid mutable access or locals in condition systems.
 
+There are also some helper methods for easily adding common kinds of Run Conditions:
+ - `.run_on_event::<T>()`: run if there are events of a given type
+ - `.run_if_resource_exists::<T>()`: run if a resource of a given type exists
+ - `.run_unless_resource_exists::<T>()`: run if a resource of a given type does not exist
+ - `.run_if_resource_equals(value)`: run if the value of a resource equals the one provided
+ - `.run_unless_resource_equals(value)`: run if the value of a resource does not equal the one provided
+
 ## Fixed Timestep
 
 TODO WIP: Coming soon!
