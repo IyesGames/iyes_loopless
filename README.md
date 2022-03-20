@@ -24,3 +24,65 @@ the complete scheduling API overhaul that the RFC proposes.
 
 This way we can have something usable *now*, while the remaining Stageless
 work is still in progress.
+
+## Run Conditions
+
+This crate provides an alternative to Bevy Run Criteria, called "Run Conditions".
+
+The different name was chosen to avoid naming conflicts and confusion with
+the APIs in Bevy. Bevy Run Criteria are pretty deeply integrated into Bevy's
+scheduling model, and this crate does not touch/replace them. They are
+technically still there and usable.
+
+### How Run Conditions Work?
+
+You can convert any Bevy system into a "conditional system", by calling
+`.into_conditional()`. This allows you to add any number of "conditions" on it,
+by repeatedly calling the `.run_if` builder method.
+
+Each condition is just a Bevy system that outputs (returns) a `bool`.
+
+The conditional system will present itself to
+Bevy as a single big system (similar to Bevy's [system
+chaining](https://bevy-cheatbook.github.io/programming/system-chaining.html)),
+combining the system it was created from with all the condition systems
+attached.
+
+When it runs, it will run each condition, and abort if any of them returns
+`false`. The main system will run only if all the conditions return `true`.
+
+```rust
+use bevy::prelude::*;
+use iyes_loopless::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_system(
+            notify_server
+                .into_conditional()
+                .run_if(in_multiplayer)
+                .run_if(on_mytimer)
+        )
+        .run();
+}
+
+/// Condition checking our timer
+fn on_mytimer(mytimer: Res<MyTimer>) -> bool {
+    mytimer.timer.just_finished()
+}
+
+/// Condition checking if we are connected to multiplayer server
+fn in_multiplayer(gamemode: Res<GameMode>, connected: Res<ServerState>) -> bool {
+    *gamemode == GameMode::Multiplayer &&
+    connected.is_active()
+}
+
+/// Some system that should only run on a timer in multiplayer
+fn notify_server(/* ... */) {
+    // ...
+}
+```
+
+It is highly recommended that all your condition systems only access data
+immutably. Avoid mutable access or locals in condition systems.
