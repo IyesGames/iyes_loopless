@@ -12,6 +12,12 @@
 //! All of the data access (from all the system params) will be combined together.
 //! When it runs, it will run each condition, and abort if any of them returns `false`.
 //! The main system will only run if all conditions return `true`.
+//!
+//! It is highly recommended that all your conditions only access data
+//! immutably. Avoid mutable access or locals in condition systems, unless are
+//! really sure about what you are doing. If you add the same condition to many
+//! systems, it *will run with each one*.
+//!
 
 use std::borrow::Cow;
 

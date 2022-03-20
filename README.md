@@ -87,7 +87,9 @@ fn notify_server(/* ... */) {
 ```
 
 It is highly recommended that all your condition systems only access data
-immutably. Avoid mutable access or locals in condition systems.
+immutably. Avoid mutable access or locals in condition systems, unless are
+really sure about what you are doing. If you add the same condition to many
+systems, it *will run with each one*.
 
 There are also some helper methods for easily adding common kinds of Run Conditions:
  - `.run_on_event::<T>()`: run if there are events of a given type
