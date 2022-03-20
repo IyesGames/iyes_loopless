@@ -26,8 +26,8 @@ use bevy_ecs::{
     archetype::{Archetype, ArchetypeComponentId},
     component::ComponentId,
     query::Access,
-    system::{ConfigurableSystem, IntoSystem, System, Local, Res, Resource},
-    world::{FromWorld, World},
+    system::{IntoSystem, IntoChainSystem, In, System, Res, Resource},
+    world::World,
 };
 
 /// Represents a [`System`](bevy_ecs::system::System) that runs conditionally, based on any number of Run Condition systems.
@@ -122,29 +122,49 @@ impl<S: System> ConditionalSystem<S> {
         self
     }
 
+    /// Helper: add a condition, but flip its result
+    pub fn run_if_not<Condition, Params>(self, condition: Condition) -> Self
+        where Condition: IntoSystem<(), bool, Params>,
+    {
+        // PERF: is using system chaining here inefficient?
+        self.run_if(condition.chain(move |In(x): In<bool>,| !x))
+    }
+
     /// Helper: add a condition to run if there are events of the given type
     pub fn run_on_event<T: Send + Sync + 'static>(self) -> Self {
-        self.run_if(on_event::<T>)
+        self.run_if(move | ev: Res<Events<T>> | !ev.is_empty())
     }
 
     /// Helper: add a condition to run if a resource of a given type exists
     pub fn run_if_resource_exists<T: Resource>(self) -> Self {
-        self.run_if(if_resource_exists::<T>)
+        self.run_if(move | res: Option<Res<T>> | res.is_some())
     }
 
     /// Helper: add a condition to run if a resource of a given type does not exist
     pub fn run_unless_resource_exists<T: Resource>(self) -> Self {
-        self.run_if(unless_resource_exists::<T>)
+        self.run_if(move | res: Option<Res<T>> | res.is_none())
     }
 
     /// Helper: add a condition to run if a resource equals the given value
-    pub fn run_if_resource_equals<T: Resource + PartialEq + FromWorld>(self, value: T) -> Self {
-        self.run_if(if_resource_equals::<T>.config(|c| c.0 = Some(value)))
+    pub fn run_if_resource_equals<T: Resource + PartialEq>(self, value: T) -> Self {
+        self.run_if(move | res: Option<Res<T>> | {
+            if let Some(res) = res {
+                *res == value
+            } else {
+                false
+            }
+        })
     }
 
     /// Helper: add a condition to run if a resource does not equal the given value
-    pub fn run_unless_resource_equals<T: Resource + PartialEq + FromWorld>(self, value: T) -> Self {
-        self.run_if(unless_resource_equals::<T>.config(|c| c.0 = Some(value)))
+    pub fn run_unless_resource_equals<T: Resource + PartialEq>(self, value: T) -> Self {
+        self.run_if(move | res: Option<Res<T>> | {
+            if let Some(res) = res {
+                *res != value
+            } else {
+                false
+            }
+        })
     }
 }
 
@@ -163,38 +183,5 @@ impl<S, In, Out, Params> IntoConditionalSystem<In, Out, Params> for S
             archetype_component_access: Default::default(),
             component_access: Default::default(),
         }
-    }
-}
-
-/// Condition for `.run_on_event`
-fn on_event<T: Send + Sync + 'static>(events: Res<Events<T>>) -> bool {
-    !events.is_empty()
-}
-
-/// Condition for `.run_if_resource_exists`
-fn if_resource_exists<T: Resource>(res: Option<Res<T>>) -> bool {
-    res.is_some()
-}
-
-/// Condition for `.run_unless_resource_exists`
-fn unless_resource_exists<T: Resource>(res: Option<Res<T>>) -> bool {
-    res.is_none()
-}
-
-/// Condition for `.run_if_resource_equals`
-fn if_resource_equals<T: Resource + PartialEq + FromWorld>(value: Local<T>, res: Option<Res<T>>) -> bool {
-    if let Some(res) = res {
-        *res == *value
-    } else {
-        false
-    }
-}
-
-/// Condition for `.run_unless_resource_equals`
-fn unless_resource_equals<T: Resource + PartialEq + FromWorld>(value: Local<T>, res: Option<Res<T>>) -> bool {
-    if let Some(res) = res {
-        *res != *value
-    } else {
-        false
     }
 }
