@@ -88,3 +88,11 @@ fn notify_server(/* ... */) {
 
 It is highly recommended that all your condition systems only access data
 immutably. Avoid mutable access or locals in condition systems.
+
+## Fixed Timestep
+
+TODO WIP: Coming soon!
+
+## States
+
+TODO WIP: Coming soon!
