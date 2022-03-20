@@ -51,6 +51,8 @@ attached.
 When it runs, it will run each condition, and abort if any of them returns
 `false`. The main system will run only if all the conditions return `true`.
 
+(see `examples/conditions.rs` for a more complete example)
+
 ```rust
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
