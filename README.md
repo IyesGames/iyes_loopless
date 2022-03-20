@@ -148,13 +148,12 @@ fn main() {
             CoreStage::Update,
             "my_fixed_update",
             FixedTimestepStage::new(Duration::from_millis(250))
-                .with_stage(fixed_spawn_stage)
-                .with_stage(post_fixed_spawn_stage)
+                .with_stage(fixed_first)
+                .with_stage(fixed_second)
         )
         // add normal bevy systems:
-        .add_startup_system(setup_camera)
-        .add_system(debug_new_count)
-        .add_system(random_hiccups)
+        .add_startup_system(setup)
+        .add_system(do_thing)
         .run();
 }
 ```
