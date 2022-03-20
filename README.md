@@ -25,6 +25,15 @@ the complete scheduling API overhaul that the RFC proposes.
 This way we can have something usable *now*, while the remaining Stageless
 work is still in progress.
 
+## Dependencies
+
+This crate can be used with just pure `bevy_ecs`. It optionally (enabled by
+default) depends on `bevy_core` to access the `Time` resource, used for the
+fixed timestep implementation.
+
+You can build without default features to remove the fixed timestep stuff,
+and depend just on `bevy_ecs`.
+
 ## Run Conditions
 
 This crate provides an alternative to Bevy Run Criteria, called "Run Conditions".
@@ -100,7 +109,59 @@ There are also some helper methods for easily adding common kinds of Run Conditi
 
 ## Fixed Timestep
 
-TODO WIP: Coming soon!
+This crate offers a fixed timestep implementation that uses the Bevy `Stage`
+API. You can add a `FixedTimestepStage` to your `App`, wherever you would
+like it to run. Typically, a good place would be before `CoreStage::Update`.
+
+It is a container for multiple child stages. You might want to add multiple
+child `SystemStage`s, if you'd like to use `Commands` in your systems and
+have them applied between each child stage. Or you can just use one if you
+don't care. :)
+
+Every frame, the `FixedTimestepStage` will accumulate the time delta. When
+it goes over the set timestep value, it will run all the child stages. It
+will repeat the sequence of child stages multiple times if needed, if
+more than one timestep has accumulated.
+
+(see `examples/fixedtimestep.rs` for a complete working example)
+
+```rust
+use bevy::prelude::*;
+use iyes_loopless::prelude::*;
+
+fn main() {
+    // prepare our stages for fixed timestep
+    // (creating variables to prevent code indentation
+    // from drifting too far to the right)
+
+    // can create multiple, to use Commands
+    let mut fixed_first = SystemStage::parallel();
+    // ... add systems to it ...
+
+    let mut fixed_second = SystemStage::parallel();
+    // ... add systems to it ...
+
+    App::new()
+        .add_plugins(DefaultPlugins)
+        // add the fixed timestep stage:
+        .add_stage_before(
+            CoreStage::Update,
+            "my_fixed_update",
+            FixedTimestepStage::new(Duration::from_millis(250))
+                .with_stage(fixed_spawn_stage)
+                .with_stage(post_fixed_spawn_stage)
+        )
+        // add normal bevy systems:
+        .add_startup_system(setup_camera)
+        .add_system(debug_new_count)
+        .add_system(random_hiccups)
+        .run();
+}
+```
+
+Since this implementation does not use Run Criteria, you are free to use
+Run Criteria for other purposes. Or better yet: don't, and use the [Run
+Conditions](#run-conditions) from this crate instead! ;)
 
 ## States
 
