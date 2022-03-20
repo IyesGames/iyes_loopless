@@ -30,6 +30,9 @@ use bevy_ecs::{
     world::World,
 };
 
+#[cfg(feature = "states")]
+use crate::state::CurrentState;
+
 /// Represents a [`System`](bevy_ecs::system::System) that runs conditionally, based on any number of Run Condition systems.
 ///
 /// Each conditions system must return `bool`.
@@ -165,6 +168,18 @@ impl<S: System> ConditionalSystem<S> {
                 false
             }
         })
+    }
+
+    #[cfg(feature = "states")]
+    /// Helper: run in a specific state (checks the [`CurrentState`] resource)
+    pub fn run_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_if_resource_equals(CurrentState(state))
+    }
+
+    #[cfg(feature = "states")]
+    /// Helper: run when not in a specific state (checks the [`CurrentState`] resource)
+    pub fn run_not_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_unless_resource_equals(CurrentState(state))
     }
 }
 
