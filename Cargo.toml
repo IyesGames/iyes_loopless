@@ -1,7 +1,14 @@
 [package]
 name = "iyes_loopless"
 version = "0.1.0"
+description = "Composable alternatives to Bevy's States/FixedTimestep/RunCriteria"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/IyesGames/iyes_loopless"
+keywords = ["gamedev", "bevy"]
+categories = ["game-engines"]
+exclude = ["assets"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
