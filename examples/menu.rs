@@ -47,8 +47,6 @@ fn main() {
     let mut fixedupdate = SystemStage::parallel();
     fixedupdate.add_system(
         spawn_sprite
-            // make it conditional
-            .into_conditional()
             // only in-game!
             .run_in_state(GameState::InGame)
             // only while the spacebar is pressed
@@ -85,17 +83,14 @@ fn main() {
 
         .add_system(
             exit_on_esc_system
-                .into_conditional()
                 .run_in_state(GameState::MainMenu)
         )
         .add_system(
             back_to_menu_on_esc
-                .into_conditional()
                 .run_in_state(GameState::InGame)
         )
         .add_system(
             spin_sprites
-                .into_conditional()
                 .run_in_state(GameState::InGame)
                 .run_if_not(spacebar_pressed)
         )
@@ -104,13 +99,11 @@ fn main() {
         // our menu button handlers
         .add_system(
             butt_exit
-                .into_conditional()
                 .run_in_state(GameState::MainMenu)
                 .run_if(on_butt_interact::<ExitButt>)
         )
         .add_system(
             butt_game
-                .into_conditional()
                 .run_in_state(GameState::MainMenu)
                 .run_if(on_butt_interact::<EnterButt>)
         )

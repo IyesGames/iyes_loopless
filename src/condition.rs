@@ -184,8 +184,67 @@ impl<S: System> ConditionalSystem<S> {
 }
 
 /// Extension trait allowing any system to be converted into a `ConditionalSystem`
-pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> {
+pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + Sized {
     fn into_conditional(self) -> ConditionalSystem<Self::System>;
+
+    fn run_if<Condition, CondParams>(self, condition: Condition) -> ConditionalSystem<Self::System>
+        where Condition: IntoSystem<(), bool, CondParams>,
+    {
+        self.into_conditional()
+            .run_if(condition)
+    }
+
+    fn run_if_not<Condition, CondParams>(self, condition: Condition) -> ConditionalSystem<Self::System>
+        where Condition: IntoSystem<(), bool, CondParams>,
+    {
+        self.into_conditional()
+            .run_if_not(condition)
+    }
+
+    fn run_on_event<T: Send + Sync + 'static>(self) -> ConditionalSystem<Self::System>
+    {
+        self.into_conditional()
+            .run_on_event::<T>()
+    }
+
+    fn run_if_resource_exists<T: Resource>(self) -> ConditionalSystem<Self::System>
+    {
+        self.into_conditional()
+            .run_if_resource_exists::<T>()
+    }
+
+    fn run_unless_resource_exists<T: Resource>(self) -> ConditionalSystem<Self::System>
+    {
+        self.into_conditional()
+            .run_unless_resource_exists::<T>()
+    }
+
+    fn run_if_resource_equals<T: Resource + PartialEq>(self, value: T) -> ConditionalSystem<Self::System>
+    {
+        self.into_conditional()
+            .run_if_resource_equals(value)
+    }
+
+    fn run_unless_resource_equals<T: Resource + PartialEq>(self, value: T) -> ConditionalSystem<Self::System>
+    {
+        self.into_conditional()
+            .run_unless_resource_equals(value)
+    }
+
+    #[cfg(feature = "states")]
+    fn run_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> ConditionalSystem<Self::System>
+    {
+        self.into_conditional()
+            .run_in_state(state)
+    }
+
+    #[cfg(feature = "states")]
+    fn run_not_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> ConditionalSystem<Self::System>
+    {
+        self.into_conditional()
+            .run_not_in_state(state)
+    }
+
 }
 
 impl<S, In, Out, Params> IntoConditionalSystem<In, Out, Params> for S

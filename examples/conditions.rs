@@ -9,7 +9,6 @@ fn main() {
         .init_resource::<ServerState>()
         .add_system(
             notify
-                .into_conditional()
                 .run_if(in_multiplayer)
                 .run_if(on_mytimer)
                 // labels and ordering must come at the end
@@ -17,7 +16,6 @@ fn main() {
         )
         .add_system(
             tick_mytimer
-                .into_conditional()
                 .run_if(in_multiplayer)
                 .run_if(spacebar_pressed)
                 // labels and ordering must come at the end

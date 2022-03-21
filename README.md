@@ -49,9 +49,9 @@ technically still there and usable.
 
 ### How Run Conditions Work?
 
-You can convert any Bevy system into a "conditional system", by calling
-`.into_conditional()`. This allows you to add any number of "conditions" on it,
-by repeatedly calling the `.run_if` builder method.
+You can convert any Bevy system into a "conditional system". This allows you
+to add any number of "conditions" on it, by repeatedly calling the `.run_if`
+builder method.
 
 Each condition is just a Bevy system that outputs (returns) a `bool`.
 
@@ -75,7 +75,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_system(
             notify_server
-                .into_conditional()
                 .run_if(in_multiplayer)
                 .run_if(on_mytimer)
         )
@@ -250,7 +249,6 @@ fn main() {
     fixedupdate.add_system(
         fixed_thing
             // only do it in-game
-            .into_conditional()
             .run_in_state(GameState::InGame)
     );
 
@@ -279,12 +277,10 @@ fn main() {
         // Add our various systems
         .add_system(
             menu_stuff
-                .into_conditional()
                 .run_in_state(GameState::MainMenu)
         )
         .add_system(
             animate
-                .into_conditional()
                 .run_in_state(GameState::InGame)
         )
 
