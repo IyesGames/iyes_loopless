@@ -1,4 +1,4 @@
-use bevy_ecs::schedule::{StateData, Stage};
+use bevy_ecs::schedule::{Stage, StateData};
 use bevy_ecs::world::World;
 use bevy_utils::HashMap;
 
@@ -86,7 +86,10 @@ impl<T: StateData> Stage for StateTransitionStage<T> {
                 if let Some(stage) = self.enter_stages.get_mut(&self.default) {
                     stage.run(world);
                 }
-                world.get_resource_or_insert_with(|| CurrentState(self.default.clone())).0.clone()
+                world
+                    .get_resource_or_insert_with(|| CurrentState(self.default.clone()))
+                    .0
+                    .clone()
             };
 
             let next = world.remove_resource::<NextState<T>>();

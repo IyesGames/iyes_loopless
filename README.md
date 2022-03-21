@@ -275,14 +275,8 @@ fn main() {
         )
 
         // Add our various systems
-        .add_system(
-            menu_stuff
-                .run_in_state(GameState::MainMenu)
-        )
-        .add_system(
-            animate
-                .run_in_state(GameState::InGame)
-        )
+        .add_system(menu_stuff.run_in_state(GameState::MainMenu))
+        .add_system(animate.run_in_state(GameState::InGame))
 
         .run();
 }

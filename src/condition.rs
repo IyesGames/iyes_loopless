@@ -22,11 +22,11 @@
 use std::borrow::Cow;
 
 use bevy_ecs::{
-    event::Events,
     archetype::{Archetype, ArchetypeComponentId},
     component::ComponentId,
+    event::Events,
     query::Access,
-    system::{IntoSystem, IntoChainSystem, In, System, Res, Resource},
+    system::{In, IntoChainSystem, IntoSystem, Res, Resource, System},
     world::World,
 };
 
@@ -118,7 +118,8 @@ impl<Out: Default, S: System<Out = Out>> System for ConditionalSystem<S> {
 impl<S: System> ConditionalSystem<S> {
     /// Builder method for adding more run conditions to a `ConditionalSystem`
     pub fn run_if<Condition, Params>(mut self, condition: Condition) -> Self
-        where Condition: IntoSystem<(), bool, Params>,
+    where
+        Condition: IntoSystem<(), bool, Params>,
     {
         let condition_system = condition.system();
         self.conditions.push(Box::new(condition_system));
@@ -127,30 +128,31 @@ impl<S: System> ConditionalSystem<S> {
 
     /// Helper: add a condition, but flip its result
     pub fn run_if_not<Condition, Params>(self, condition: Condition) -> Self
-        where Condition: IntoSystem<(), bool, Params>,
+    where
+        Condition: IntoSystem<(), bool, Params>,
     {
         // PERF: is using system chaining here inefficient?
-        self.run_if(condition.chain(move |In(x): In<bool>,| !x))
+        self.run_if(condition.chain(move |In(x): In<bool>| !x))
     }
 
     /// Helper: add a condition to run if there are events of the given type
     pub fn run_on_event<T: Send + Sync + 'static>(self) -> Self {
-        self.run_if(move | ev: Res<Events<T>> | !ev.is_empty())
+        self.run_if(move |ev: Res<Events<T>>| !ev.is_empty())
     }
 
     /// Helper: add a condition to run if a resource of a given type exists
     pub fn run_if_resource_exists<T: Resource>(self) -> Self {
-        self.run_if(move | res: Option<Res<T>> | res.is_some())
+        self.run_if(move |res: Option<Res<T>>| res.is_some())
     }
 
     /// Helper: add a condition to run if a resource of a given type does not exist
     pub fn run_unless_resource_exists<T: Resource>(self) -> Self {
-        self.run_if(move | res: Option<Res<T>> | res.is_none())
+        self.run_if(move |res: Option<Res<T>>| res.is_none())
     }
 
     /// Helper: add a condition to run if a resource equals the given value
     pub fn run_if_resource_equals<T: Resource + PartialEq>(self, value: T) -> Self {
-        self.run_if(move | res: Option<Res<T>> | {
+        self.run_if(move |res: Option<Res<T>>| {
             if let Some(res) = res {
                 *res == value
             } else {
@@ -161,7 +163,7 @@ impl<S: System> ConditionalSystem<S> {
 
     /// Helper: add a condition to run if a resource does not equal the given value
     pub fn run_unless_resource_equals<T: Resource + PartialEq>(self, value: T) -> Self {
-        self.run_if(move | res: Option<Res<T>> | {
+        self.run_if(move |res: Option<Res<T>>| {
             if let Some(res) = res {
                 *res != value
             } else {
@@ -188,67 +190,68 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn into_conditional(self) -> ConditionalSystem<Self::System>;
 
     fn run_if<Condition, CondParams>(self, condition: Condition) -> ConditionalSystem<Self::System>
-        where Condition: IntoSystem<(), bool, CondParams>,
+    where
+        Condition: IntoSystem<(), bool, CondParams>,
     {
-        self.into_conditional()
-            .run_if(condition)
+        self.into_conditional().run_if(condition)
     }
 
-    fn run_if_not<Condition, CondParams>(self, condition: Condition) -> ConditionalSystem<Self::System>
-        where Condition: IntoSystem<(), bool, CondParams>,
+    fn run_if_not<Condition, CondParams>(
+        self,
+        condition: Condition,
+    ) -> ConditionalSystem<Self::System>
+    where
+        Condition: IntoSystem<(), bool, CondParams>,
     {
-        self.into_conditional()
-            .run_if_not(condition)
+        self.into_conditional().run_if_not(condition)
     }
 
-    fn run_on_event<T: Send + Sync + 'static>(self) -> ConditionalSystem<Self::System>
-    {
-        self.into_conditional()
-            .run_on_event::<T>()
+    fn run_on_event<T: Send + Sync + 'static>(self) -> ConditionalSystem<Self::System> {
+        self.into_conditional().run_on_event::<T>()
     }
 
-    fn run_if_resource_exists<T: Resource>(self) -> ConditionalSystem<Self::System>
-    {
-        self.into_conditional()
-            .run_if_resource_exists::<T>()
+    fn run_if_resource_exists<T: Resource>(self) -> ConditionalSystem<Self::System> {
+        self.into_conditional().run_if_resource_exists::<T>()
     }
 
-    fn run_unless_resource_exists<T: Resource>(self) -> ConditionalSystem<Self::System>
-    {
-        self.into_conditional()
-            .run_unless_resource_exists::<T>()
+    fn run_unless_resource_exists<T: Resource>(self) -> ConditionalSystem<Self::System> {
+        self.into_conditional().run_unless_resource_exists::<T>()
     }
 
-    fn run_if_resource_equals<T: Resource + PartialEq>(self, value: T) -> ConditionalSystem<Self::System>
-    {
-        self.into_conditional()
-            .run_if_resource_equals(value)
+    fn run_if_resource_equals<T: Resource + PartialEq>(
+        self,
+        value: T,
+    ) -> ConditionalSystem<Self::System> {
+        self.into_conditional().run_if_resource_equals(value)
     }
 
-    fn run_unless_resource_equals<T: Resource + PartialEq>(self, value: T) -> ConditionalSystem<Self::System>
-    {
-        self.into_conditional()
-            .run_unless_resource_equals(value)
-    }
-
-    #[cfg(feature = "states")]
-    fn run_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> ConditionalSystem<Self::System>
-    {
-        self.into_conditional()
-            .run_in_state(state)
+    fn run_unless_resource_equals<T: Resource + PartialEq>(
+        self,
+        value: T,
+    ) -> ConditionalSystem<Self::System> {
+        self.into_conditional().run_unless_resource_equals(value)
     }
 
     #[cfg(feature = "states")]
-    fn run_not_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> ConditionalSystem<Self::System>
-    {
-        self.into_conditional()
-            .run_not_in_state(state)
+    fn run_in_state<T: bevy_ecs::schedule::StateData>(
+        self,
+        state: T,
+    ) -> ConditionalSystem<Self::System> {
+        self.into_conditional().run_in_state(state)
     }
 
+    #[cfg(feature = "states")]
+    fn run_not_in_state<T: bevy_ecs::schedule::StateData>(
+        self,
+        state: T,
+    ) -> ConditionalSystem<Self::System> {
+        self.into_conditional().run_not_in_state(state)
+    }
 }
 
 impl<S, In, Out, Params> IntoConditionalSystem<In, Out, Params> for S
-    where S: IntoSystem<In, Out, Params>,
+where
+    S: IntoSystem<In, Out, Params>,
 {
     fn into_conditional(self) -> ConditionalSystem<Self::System> {
         ConditionalSystem {

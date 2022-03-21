@@ -5,8 +5,7 @@ use rand::prelude::*;
 use std::time::Duration;
 
 /// Stage Label for our fixed update stage
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(StageLabel)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, StageLabel)]
 struct MyFixedUpdate;
 
 fn main() {
@@ -28,7 +27,7 @@ fn main() {
             MyFixedUpdate,
             FixedTimestepStage::new(Duration::from_millis(250))
                 .with_stage(fixed_spawn_stage)
-                .with_stage(post_fixed_spawn_stage)
+                .with_stage(post_fixed_spawn_stage),
         )
         .add_startup_system(setup_camera)
         .add_system(debug_new_count)
@@ -66,16 +65,18 @@ fn random_hiccups() {
 fn spawn_entities(mut commands: Commands) {
     let mut rng = thread_rng();
 
-    commands.spawn_bundle(SpriteBundle {
-        sprite: Sprite {
-            color: Color::rgba(rng.gen(), rng.gen(), rng.gen(), 0.5),
-            custom_size: Some(Vec2::new(64., 64.)),
+    commands
+        .spawn_bundle(SpriteBundle {
+            sprite: Sprite {
+                color: Color::rgba(rng.gen(), rng.gen(), rng.gen(), 0.5),
+                custom_size: Some(Vec2::new(64., 64.)),
+                ..Default::default()
+            },
+            // the `reposition_entities` system will take care of X and Y ;)
+            transform: Transform::from_xyz(0.0, 0.0, rng.gen_range(0.0..100.0)),
             ..Default::default()
-        },
-        // the `reposition_entities` system will take care of X and Y ;)
-        transform: Transform::from_xyz(0.0, 0.0, rng.gen_range(0.0 .. 100.0)),
-        ..Default::default()
-    }).insert(MySprite);
+        })
+        .insert(MySprite);
 }
 
 /// Move each sprite to a random X,Y position
@@ -83,8 +84,8 @@ fn reposition_entities(mut q: Query<&mut Transform, With<MySprite>>) {
     let mut rng = thread_rng();
 
     for mut transform in q.iter_mut() {
-        transform.translation.x = rng.gen_range(-420.0 .. 420.0);
-        transform.translation.y = rng.gen_range(-420.0 .. 420.0);
+        transform.translation.x = rng.gen_range(-420.0..420.0);
+        transform.translation.y = rng.gen_range(-420.0..420.0);
     }
 }
 

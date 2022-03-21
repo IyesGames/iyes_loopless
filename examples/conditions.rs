@@ -12,14 +12,14 @@ fn main() {
                 .run_if(in_multiplayer)
                 .run_if(on_mytimer)
                 // labels and ordering must come at the end
-                .after("mytick")
+                .after("mytick"),
         )
         .add_system(
             tick_mytimer
                 .run_if(in_multiplayer)
                 .run_if(spacebar_pressed)
                 // labels and ordering must come at the end
-                .label("mytick")
+                .label("mytick"),
         )
         .run();
 }
@@ -31,8 +31,7 @@ fn on_mytimer(mytimer: Res<MyTimer>) -> bool {
 
 /// Condition checking if we are connected to multiplayer server
 fn in_multiplayer(gamemode: Res<GameMode>, connected: Res<ServerState>) -> bool {
-    *gamemode == GameMode::Multiplayer &&
-    connected.is_active()
+    *gamemode == GameMode::Multiplayer && connected.is_active()
 }
 
 /// Condition checking if spacebar is pressed
@@ -78,4 +77,3 @@ impl ServerState {
         true
     }
 }
-

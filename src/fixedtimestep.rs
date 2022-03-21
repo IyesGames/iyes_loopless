@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use bevy_ecs::prelude::*;
 use bevy_core::Time;
+use bevy_ecs::prelude::*;
 
 /// A Stage that runs a number of child stages with a fixed timestep
 ///
