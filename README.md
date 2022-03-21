@@ -105,6 +105,7 @@ really sure about what you are doing. If you add the same condition to many
 systems, it *will run with each one*.
 
 There are also some helper methods for easily adding common kinds of Run Conditions:
+ - `.run_if_not`: invert the output of the condition
  - `.run_on_event::<T>()`: run if there are events of a given type
  - `.run_if_resource_exists::<T>()`: run if a resource of a given type exists
  - `.run_unless_resource_exists::<T>()`: run if a resource of a given type does not exist
@@ -289,3 +290,17 @@ fn main() {
 
         .run();
 }
+
+```
+
+### State transitions under fixed timestep
+
+If you have a state type that you are using for controlling fixed timestep
+stuff, you might want state transitions to happen only on fixed timestep
+(not just on any frame).
+
+To accomplish that, you can add the `StateTransitionStage` as a child stage
+at the beginning of your `FixedTimestepStage`.
+
+The stage types from this crate are composable like that! :) They accept
+any stage type.
