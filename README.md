@@ -7,6 +7,12 @@ The ones provided by this crate do not use "looping stages", and can therefore
 be combined/composed together elegantly, solving some of the most annoying
 usability limitations of the respective APIs in Bevy.
 
+Version Compatibility Table:
+
+|Bevy Version|Crate Version|
+|------------|-------------|
+|`0.6`       |`0.1`        |
+
 ## How does this relate to the Bevy Stageless RFC?
 
 This crate draws *very heavy* inspiration from the ["Stageless
