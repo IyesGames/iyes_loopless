@@ -111,6 +111,14 @@ There are also some helper methods for easily adding common kinds of Run Conditi
  - `.run_if_resource_equals(value)`: run if the value of a resource equals the one provided
  - `.run_unless_resource_equals(value)`: run if the value of a resource does not equal the one provided
 
+And if you are using [States](#states):
+ - `.run_in_state(state)`
+ - `.run_not_in_state(state)`
+
+If you need to use classic Bevy States, you can use these adapters to check them with run conditions:
+ - `.run_in_bevy_state(state)`
+ - `.run_not_in_bevy_state(state)`
+
 ## Fixed Timestep
 
 This crate offers a fixed timestep implementation that uses the Bevy `Stage`

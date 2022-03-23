@@ -183,6 +183,30 @@ impl<S: System> ConditionalSystem<S> {
     pub fn run_not_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
         self.run_unless_resource_equals(CurrentState(state))
     }
+
+    #[cfg(feature = "bevy-compat")]
+    /// Helper: run in a specific Bevy state (checks the `State<T>` resource)
+    pub fn run_in_bevy_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_if(move |res: Option<Res<bevy_ecs::schedule::State<T>>>| {
+            if let Some(res) = res {
+                res.current() == &state
+            } else {
+                false
+            }
+        })
+    }
+
+    #[cfg(feature = "bevy-compat")]
+    /// Helper: run when not in a specific Bevy state (checks the `State<T>` resource)
+    pub fn run_not_in_bevy_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_if(move |res: Option<Res<bevy_ecs::schedule::State<T>>>| {
+            if let Some(res) = res {
+                res.current() != &state
+            } else {
+                false
+            }
+        })
+    }
 }
 
 /// Extension trait allowing any system to be converted into a `ConditionalSystem`
@@ -246,6 +270,22 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
         state: T,
     ) -> ConditionalSystem<Self::System> {
         self.into_conditional().run_not_in_state(state)
+    }
+
+    #[cfg(feature = "bevy-compat")]
+    fn run_in_bevy_state<T: bevy_ecs::schedule::StateData>(
+        self,
+        state: T,
+    ) -> ConditionalSystem<Self::System> {
+        self.into_conditional().run_in_bevy_state(state)
+    }
+
+    #[cfg(feature = "bevy-compat")]
+    fn run_not_in_bevy_state<T: bevy_ecs::schedule::StateData>(
+        self,
+        state: T,
+    ) -> ConditionalSystem<Self::System> {
+        self.into_conditional().run_not_in_bevy_state(state)
     }
 }
 

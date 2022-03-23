@@ -13,13 +13,15 @@ exclude = ["assets"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = [ "fixedtimestep", "states" ]
+default = [ "fixedtimestep", "states", "bevy-compat" ]
 fixedtimestep = [
     "bevy_core",
 ]
 states = [
     "bevy_utils",
 ]
+# provide adapters for Bevy APIs, like the `.run_in_bevy_state` RC
+bevy-compat = []
 
 [dependencies]
 bevy_ecs = "0.6.1"
