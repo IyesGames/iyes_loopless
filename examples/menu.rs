@@ -74,27 +74,27 @@ fn main() {
             "FixedUpdate",
             FixedTimestepStage::from_stage(Duration::from_millis(125), fixedupdate),
         )
+        // menu stuff
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::MainMenu)
+                .with_system(exit_on_esc_system)
+                .with_system(butt_interact_visual)
+                // our menu button handlers
+                .with_system(butt_exit.run_if(on_butt_interact::<ExitButt>))
+                .with_system(butt_game.run_if(on_butt_interact::<EnterButt>))
+                .into()
+        )
+        // in-game stuff
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::InGame)
+                .with_system(back_to_menu_on_esc)
+                .with_system(spin_sprites.run_if_not(spacebar_pressed))
+                .into()
+        )
         // our other various systems:
         .add_system(debug_current_state)
-        .add_system(exit_on_esc_system.run_in_state(GameState::MainMenu))
-        .add_system(back_to_menu_on_esc.run_in_state(GameState::InGame))
-        .add_system(
-            spin_sprites
-                .run_in_state(GameState::InGame)
-                .run_if_not(spacebar_pressed),
-        )
-        .add_system(butt_interact_visual)
-        // our menu button handlers
-        .add_system(
-            butt_exit
-                .run_in_state(GameState::MainMenu)
-                .run_if(on_butt_interact::<ExitButt>),
-        )
-        .add_system(
-            butt_game
-                .run_in_state(GameState::MainMenu)
-                .run_if(on_butt_interact::<EnterButt>),
-        )
         .run();
 }
 
