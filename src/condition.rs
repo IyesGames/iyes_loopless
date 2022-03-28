@@ -26,12 +26,15 @@ use bevy_ecs::{
     component::ComponentId,
     event::Events,
     query::Access,
-    system::{In, IntoChainSystem, IntoSystem, Res, Resource, System},
+    schedule::SystemSet,
+    system::{In, IntoChainSystem, IntoSystem, Res, Resource, System, BoxedSystem},
     world::World,
 };
 
 #[cfg(feature = "states")]
 use crate::state::CurrentState;
+
+type BoxedCondition = Box<dyn System<In = (), Out = bool>>;
 
 /// Represents a [`System`](bevy_ecs::system::System) that runs conditionally, based on any number of Run Condition systems.
 ///
@@ -41,17 +44,17 @@ use crate::state::CurrentState;
 /// When ran, it runs as a single aggregate system (similar to Bevy's [`ChainSystem`](bevy_ecs::system::ChainSystem)).
 /// It runs every condition system first, and aborts if any of them return `false`.
 /// The main system will only run if all the conditions return `true`.
-pub struct ConditionalSystem<S: System> {
-    system: S,
-    conditions: Vec<Box<dyn System<In = (), Out = bool>>>,
+pub struct ConditionalSystem {
+    system: BoxedSystem,
+    conditions: Vec<BoxedCondition>,
     component_access: Access<ComponentId>,
     archetype_component_access: Access<ArchetypeComponentId>,
 }
 
 // Based on the implementation of Bevy's ChainSystem
-impl<Out: Default, S: System<Out = Out>> System for ConditionalSystem<S> {
-    type In = S::In;
-    type Out = Out;
+impl System for ConditionalSystem {
+    type In = ();
+    type Out = ();
 
     fn name(&self) -> Cow<'static, str> {
         self.system.name()
@@ -84,7 +87,7 @@ impl<Out: Default, S: System<Out = Out>> System for ConditionalSystem<S> {
     unsafe fn run_unsafe(&mut self, input: Self::In, world: &World) -> Self::Out {
         for condition_system in self.conditions.iter_mut() {
             if !condition_system.run_unsafe((), world) {
-                return Out::default();
+                return;
             }
         }
         self.system.run_unsafe(input, world)
@@ -115,7 +118,7 @@ impl<Out: Default, S: System<Out = Out>> System for ConditionalSystem<S> {
     }
 }
 
-impl<S: System> ConditionalSystem<S> {
+impl ConditionalSystem {
     /// Builder method for adding more run conditions to a `ConditionalSystem`
     pub fn run_if<Condition, Params>(mut self, condition: Condition) -> Self
     where
@@ -210,10 +213,10 @@ impl<S: System> ConditionalSystem<S> {
 }
 
 /// Extension trait allowing any system to be converted into a `ConditionalSystem`
-pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + Sized {
-    fn into_conditional(self) -> ConditionalSystem<Self::System>;
+pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
+    fn into_conditional(self) -> ConditionalSystem;
 
-    fn run_if<Condition, CondParams>(self, condition: Condition) -> ConditionalSystem<Self::System>
+    fn run_if<Condition, CondParams>(self, condition: Condition) -> ConditionalSystem
     where
         Condition: IntoSystem<(), bool, CondParams>,
     {
@@ -223,36 +226,36 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn run_if_not<Condition, CondParams>(
         self,
         condition: Condition,
-    ) -> ConditionalSystem<Self::System>
+    ) -> ConditionalSystem
     where
         Condition: IntoSystem<(), bool, CondParams>,
     {
         self.into_conditional().run_if_not(condition)
     }
 
-    fn run_on_event<T: Send + Sync + 'static>(self) -> ConditionalSystem<Self::System> {
+    fn run_on_event<T: Send + Sync + 'static>(self) -> ConditionalSystem {
         self.into_conditional().run_on_event::<T>()
     }
 
-    fn run_if_resource_exists<T: Resource>(self) -> ConditionalSystem<Self::System> {
+    fn run_if_resource_exists<T: Resource>(self) -> ConditionalSystem {
         self.into_conditional().run_if_resource_exists::<T>()
     }
 
-    fn run_unless_resource_exists<T: Resource>(self) -> ConditionalSystem<Self::System> {
+    fn run_unless_resource_exists<T: Resource>(self) -> ConditionalSystem {
         self.into_conditional().run_unless_resource_exists::<T>()
     }
 
     fn run_if_resource_equals<T: Resource + PartialEq>(
         self,
         value: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystem {
         self.into_conditional().run_if_resource_equals(value)
     }
 
     fn run_unless_resource_equals<T: Resource + PartialEq>(
         self,
         value: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystem {
         self.into_conditional().run_unless_resource_equals(value)
     }
 
@@ -260,7 +263,7 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn run_in_state<T: bevy_ecs::schedule::StateData>(
         self,
         state: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystem {
         self.into_conditional().run_in_state(state)
     }
 
@@ -268,7 +271,7 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn run_not_in_state<T: bevy_ecs::schedule::StateData>(
         self,
         state: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystem {
         self.into_conditional().run_not_in_state(state)
     }
 
@@ -276,7 +279,7 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn run_in_bevy_state<T: bevy_ecs::schedule::StateData>(
         self,
         state: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystem {
         self.into_conditional().run_in_bevy_state(state)
     }
 
@@ -284,18 +287,18 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn run_not_in_bevy_state<T: bevy_ecs::schedule::StateData>(
         self,
         state: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystem {
         self.into_conditional().run_not_in_bevy_state(state)
     }
 }
 
-impl<S, In, Out, Params> IntoConditionalSystem<In, Out, Params> for S
+impl<S, Params> IntoConditionalSystem<Params> for S
 where
-    S: IntoSystem<In, Out, Params>,
+    S: IntoSystem<(), (), Params>,
 {
-    fn into_conditional(self) -> ConditionalSystem<Self::System> {
+    fn into_conditional(self) -> ConditionalSystem {
         ConditionalSystem {
-            system: self.system(),
+            system: Box::new(self.system()),
             conditions: Vec::new(),
             archetype_component_access: Default::default(),
             component_access: Default::default(),
