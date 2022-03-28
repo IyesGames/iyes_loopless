@@ -305,3 +305,195 @@ where
         }
     }
 }
+
+pub struct ConditionSet {
+    /// "applicator": closure that adds the condition to the system
+    conditions: Vec<Box<dyn Fn(&mut ConditionalSystem)>>,
+}
+
+pub struct ConditionSystemSet {
+    systems: Vec<ConditionalSystem>,
+    conditions: ConditionSet,
+}
+
+impl ConditionSet {
+    pub fn new() -> Self {
+        Self {
+            conditions: Vec::new(),
+        }
+    }
+
+    pub fn with_system<S, Params>(self, system: S) -> ConditionSystemSet
+    where
+        S: IntoConditionalSystem<Params>
+    {
+        let mut csset: ConditionSystemSet = self.into();
+        AddIntoConditional::add_system(&mut csset, system);
+        csset
+    }
+}
+
+impl ConditionSystemSet {
+    pub fn add_system(&mut self, system: ConditionalSystem) {
+        self.systems.push(system);
+    }
+    pub fn with_system(mut self, system: ConditionalSystem) -> Self {
+        self.add_system(system);
+        self
+    }
+}
+
+impl ConditionSet {
+    /// Add a condition to this set, to be applied to all systems
+    pub fn run_if<Condition, Params>(mut self, condition: Condition) -> Self
+    where
+        Condition: IntoSystem<(), bool, Params> + Clone + 'static,
+    {
+        // create an "applicator" closure, that we can call many times
+        // to add the condition to each system
+        self.conditions.push(Box::new(move |system| {
+            let condition_clone = condition.clone();
+            let condition_system = condition_clone.system();
+            system.conditions.insert(0, Box::new(condition_system))
+        }));
+        self
+    }
+
+    /// Helper: add a condition, but flip its result
+    pub fn run_if_not<Condition, Params>(mut self, condition: Condition) -> Self
+    where
+        Condition: IntoSystem<(), bool, Params> + Clone + 'static,
+    {
+        self.conditions.push(Box::new(move |system| {
+            let condition_clone = condition.clone();
+            // PERF: is using system chaining here inefficient?
+            let condition_inverted = condition_clone.chain(move |In(x): In<bool>| !x);
+            system.conditions.insert(0, Box::new(condition_inverted))
+        }));
+        self
+    }
+
+    /// Helper: add a condition to run if there are events of the given type
+    pub fn run_on_event<T: Send + Sync + 'static>(self) -> Self {
+        self.run_if(move |ev: Res<Events<T>>| !ev.is_empty())
+    }
+
+    /// Helper: add a condition to run if a resource of a given type exists
+    pub fn run_if_resource_exists<T: Resource>(self) -> Self {
+        self.run_if(move |res: Option<Res<T>>| res.is_some())
+    }
+
+    /// Helper: add a condition to run if a resource of a given type does not exist
+    pub fn run_unless_resource_exists<T: Resource>(self) -> Self {
+        self.run_if(move |res: Option<Res<T>>| res.is_none())
+    }
+
+    /// Helper: add a condition to run if a resource equals the given value
+    pub fn run_if_resource_equals<T: Resource + PartialEq + Clone>(self, value: T) -> Self {
+        self.run_if(move |res: Option<Res<T>>| {
+            if let Some(res) = res {
+                *res == value
+            } else {
+                false
+            }
+        })
+    }
+
+    /// Helper: add a condition to run if a resource does not equal the given value
+    pub fn run_unless_resource_equals<T: Resource + PartialEq + Clone>(self, value: T) -> Self {
+        self.run_if(move |res: Option<Res<T>>| {
+            if let Some(res) = res {
+                *res != value
+            } else {
+                false
+            }
+        })
+    }
+
+    #[cfg(feature = "states")]
+    /// Helper: run in a specific state (checks the [`CurrentState`] resource)
+    pub fn run_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_if_resource_equals(CurrentState(state))
+    }
+
+    #[cfg(feature = "states")]
+    /// Helper: run when not in a specific state (checks the [`CurrentState`] resource)
+    pub fn run_not_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_unless_resource_equals(CurrentState(state))
+    }
+
+    #[cfg(feature = "bevy-compat")]
+    /// Helper: run in a specific Bevy state (checks the `State<T>` resource)
+    pub fn run_in_bevy_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_if(move |res: Option<Res<bevy_ecs::schedule::State<T>>>| {
+            if let Some(res) = res {
+                res.current() == &state
+            } else {
+                false
+            }
+        })
+    }
+
+    #[cfg(feature = "bevy-compat")]
+    /// Helper: run when not in a specific Bevy state (checks the `State<T>` resource)
+    pub fn run_not_in_bevy_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_if(move |res: Option<Res<bevy_ecs::schedule::State<T>>>| {
+            if let Some(res) = res {
+                res.current() != &state
+            } else {
+                false
+            }
+        })
+    }
+}
+
+impl AddIntoConditional for ConditionSystemSet {
+    fn add_system<S, Params>(&mut self, system: S)
+    where
+        S: IntoConditionalSystem<Params>
+    {
+        self.add_system(system.into_conditional());
+    }
+}
+
+impl From<ConditionSet> for ConditionSystemSet {
+    fn from(cset: ConditionSet) -> ConditionSystemSet {
+        ConditionSystemSet {
+            systems: Vec::new(),
+            conditions: cset,
+        }
+    }
+}
+
+impl From<ConditionSet> for SystemSet {
+    fn from(_: ConditionSet) -> SystemSet {
+        SystemSet::new()
+    }
+}
+
+impl From<ConditionSystemSet> for SystemSet {
+    fn from(mut csset: ConditionSystemSet) -> SystemSet {
+        let mut sset = SystemSet::new();
+        for mut system in csset.systems.drain(..) {
+            for cond in csset.conditions.conditions.iter() {
+                cond(&mut system);
+            }
+            sset = sset.with_system(system);
+        }
+        sset
+    }
+}
+
+pub trait AddIntoConditional: Sized {
+    fn add_system<System, Params>(&mut self, system: System)
+    where
+        System: IntoConditionalSystem<Params>;
+
+    fn with_system<System, Params>(mut self, system: System) -> Self
+    where
+        System: IntoConditionalSystem<Params>
+    {
+        self.add_system(system);
+        self
+    }
+}
