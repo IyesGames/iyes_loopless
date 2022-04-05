@@ -26,12 +26,132 @@ use bevy_ecs::{
     component::ComponentId,
     event::Events,
     query::Access,
-    system::{In, IntoChainSystem, IntoSystem, Res, Resource, System},
+    schedule::{SystemSet, IntoSystemDescriptor, SystemLabel, ParallelSystemDescriptorCoercion, ParallelSystemDescriptor},
+    system::{In, IntoChainSystem, IntoSystem, Res, Resource, System, BoxedSystem},
     world::World,
 };
 
 #[cfg(feature = "states")]
 use crate::state::CurrentState;
+
+type BoxedCondition = Box<dyn System<In = (), Out = bool>>;
+
+type SystemLabelApplicator = Box<dyn FnOnce(BevyDescriptorWorkaround) -> BevyDescriptorWorkaround>;
+
+enum BevyDescriptorWorkaround {
+    System(ConditionalSystem),
+    Descriptor(ParallelSystemDescriptor),
+}
+
+impl From<ConditionalSystem> for BevyDescriptorWorkaround {
+    fn from(system: ConditionalSystem) -> Self {
+        Self::System(system)
+    }
+}
+
+impl From<ParallelSystemDescriptor> for BevyDescriptorWorkaround {
+    fn from(system: ParallelSystemDescriptor) -> Self {
+        Self::Descriptor(system)
+    }
+}
+
+pub struct ConditionalSystemDescriptor {
+    system: BoxedSystem,
+    conditions: Vec<BoxedCondition>,
+    label_shits: Vec<SystemLabelApplicator>,
+}
+
+impl ConditionalSystemDescriptor {
+    pub fn add_label(&mut self, label: impl SystemLabel) {
+        self.label_shits.push(Box::new(move |wa| {
+            match wa {
+                BevyDescriptorWorkaround::Descriptor(x) => {
+                    BevyDescriptorWorkaround::Descriptor(x.label(label))
+                }
+                BevyDescriptorWorkaround::System(x) => {
+                    BevyDescriptorWorkaround::Descriptor(x.label(label))
+                }
+            }
+        }))
+    }
+    pub fn add_before(&mut self, label: impl SystemLabel) {
+        self.label_shits.push(Box::new(move |wa| {
+            match wa {
+                BevyDescriptorWorkaround::Descriptor(x) => {
+                    BevyDescriptorWorkaround::Descriptor(x.before(label))
+                }
+                BevyDescriptorWorkaround::System(x) => {
+                    BevyDescriptorWorkaround::Descriptor(x.before(label))
+                }
+            }
+        }))
+    }
+    pub fn add_after(&mut self, label: impl SystemLabel) {
+        self.label_shits.push(Box::new(move |wa| {
+            match wa {
+                BevyDescriptorWorkaround::Descriptor(x) => {
+                    BevyDescriptorWorkaround::Descriptor(x.after(label))
+                }
+                BevyDescriptorWorkaround::System(x) => {
+                    BevyDescriptorWorkaround::Descriptor(x.after(label))
+                }
+            }
+        }))
+    }
+
+    pub fn label(mut self, label: impl SystemLabel) -> Self {
+        self.add_label(label);
+        self
+    }
+
+    pub fn before(mut self, label: impl SystemLabel) -> Self {
+        self.add_before(label);
+        self
+    }
+
+    pub fn after(mut self, label: impl SystemLabel) -> Self {
+        self.add_after(label);
+        self
+    }
+}
+
+impl IntoSystemDescriptor<()> for ConditionalSystemDescriptor {
+    fn into_descriptor(mut self) -> bevy_ecs::schedule::SystemDescriptor {
+        let conditional = ConditionalSystem {
+            system: self.system,
+            conditions: self.conditions,
+            component_access: Default::default(),
+            archetype_component_access: Default::default(),
+        };
+
+        // NOTE: Bevy has gone to great lengths to make my life painful.
+        // We cannot construct a system descriptor directly, because
+        // the fields in `bevy_ecs` are not `pub`, and all the traits are
+        // crafted in a way that doesn't let us do it easily.
+        // We work around this by going in a round-about way via `IntoSystem`.
+        // The only way is via `ParallelSystemDescriptorCoercion`, and it does
+        // not allow us to create an empty descriptor with just the system,
+        // it can only do the conversion by adding a label or something.
+        // Hence, this abomination of an implementation:
+        let mut bevy_wa;
+
+        // Try pulling out one label from somewhere
+        if let Some(appl) = self.label_shits.pop() {
+            bevy_wa = appl(conditional.into());
+        } else {
+            return conditional.into_descriptor();
+        }
+
+        for appl in self.label_shits.drain(..) {
+            bevy_wa = appl(bevy_wa);
+        }
+
+        match bevy_wa {
+            BevyDescriptorWorkaround::System(system) => system.into_descriptor(),
+            BevyDescriptorWorkaround::Descriptor(descriptor) => descriptor.into_descriptor(),
+        }
+    }
+}
 
 /// Represents a [`System`](bevy_ecs::system::System) that runs conditionally, based on any number of Run Condition systems.
 ///
@@ -41,17 +161,17 @@ use crate::state::CurrentState;
 /// When ran, it runs as a single aggregate system (similar to Bevy's [`ChainSystem`](bevy_ecs::system::ChainSystem)).
 /// It runs every condition system first, and aborts if any of them return `false`.
 /// The main system will only run if all the conditions return `true`.
-pub struct ConditionalSystem<S: System> {
-    system: S,
-    conditions: Vec<Box<dyn System<In = (), Out = bool>>>,
+pub struct ConditionalSystem {
+    system: BoxedSystem,
+    conditions: Vec<BoxedCondition>,
     component_access: Access<ComponentId>,
     archetype_component_access: Access<ArchetypeComponentId>,
 }
 
 // Based on the implementation of Bevy's ChainSystem
-impl<Out: Default, S: System<Out = Out>> System for ConditionalSystem<S> {
-    type In = S::In;
-    type Out = Out;
+impl System for ConditionalSystem {
+    type In = ();
+    type Out = ();
 
     fn name(&self) -> Cow<'static, str> {
         self.system.name()
@@ -84,7 +204,7 @@ impl<Out: Default, S: System<Out = Out>> System for ConditionalSystem<S> {
     unsafe fn run_unsafe(&mut self, input: Self::In, world: &World) -> Self::Out {
         for condition_system in self.conditions.iter_mut() {
             if !condition_system.run_unsafe((), world) {
-                return Out::default();
+                return;
             }
         }
         self.system.run_unsafe(input, world)
@@ -115,7 +235,7 @@ impl<Out: Default, S: System<Out = Out>> System for ConditionalSystem<S> {
     }
 }
 
-impl<S: System> ConditionalSystem<S> {
+impl ConditionalSystemDescriptor {
     /// Builder method for adding more run conditions to a `ConditionalSystem`
     pub fn run_if<Condition, Params>(mut self, condition: Condition) -> Self
     where
@@ -210,10 +330,10 @@ impl<S: System> ConditionalSystem<S> {
 }
 
 /// Extension trait allowing any system to be converted into a `ConditionalSystem`
-pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + Sized {
-    fn into_conditional(self) -> ConditionalSystem<Self::System>;
+pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
+    fn into_conditional(self) -> ConditionalSystemDescriptor;
 
-    fn run_if<Condition, CondParams>(self, condition: Condition) -> ConditionalSystem<Self::System>
+    fn run_if<Condition, CondParams>(self, condition: Condition) -> ConditionalSystemDescriptor
     where
         Condition: IntoSystem<(), bool, CondParams>,
     {
@@ -223,36 +343,36 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn run_if_not<Condition, CondParams>(
         self,
         condition: Condition,
-    ) -> ConditionalSystem<Self::System>
+    ) -> ConditionalSystemDescriptor
     where
         Condition: IntoSystem<(), bool, CondParams>,
     {
         self.into_conditional().run_if_not(condition)
     }
 
-    fn run_on_event<T: Send + Sync + 'static>(self) -> ConditionalSystem<Self::System> {
+    fn run_on_event<T: Send + Sync + 'static>(self) -> ConditionalSystemDescriptor {
         self.into_conditional().run_on_event::<T>()
     }
 
-    fn run_if_resource_exists<T: Resource>(self) -> ConditionalSystem<Self::System> {
+    fn run_if_resource_exists<T: Resource>(self) -> ConditionalSystemDescriptor {
         self.into_conditional().run_if_resource_exists::<T>()
     }
 
-    fn run_unless_resource_exists<T: Resource>(self) -> ConditionalSystem<Self::System> {
+    fn run_unless_resource_exists<T: Resource>(self) -> ConditionalSystemDescriptor {
         self.into_conditional().run_unless_resource_exists::<T>()
     }
 
     fn run_if_resource_equals<T: Resource + PartialEq>(
         self,
         value: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystemDescriptor {
         self.into_conditional().run_if_resource_equals(value)
     }
 
     fn run_unless_resource_equals<T: Resource + PartialEq>(
         self,
         value: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystemDescriptor {
         self.into_conditional().run_unless_resource_equals(value)
     }
 
@@ -260,7 +380,7 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn run_in_state<T: bevy_ecs::schedule::StateData>(
         self,
         state: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystemDescriptor {
         self.into_conditional().run_in_state(state)
     }
 
@@ -268,7 +388,7 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn run_not_in_state<T: bevy_ecs::schedule::StateData>(
         self,
         state: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystemDescriptor {
         self.into_conditional().run_not_in_state(state)
     }
 
@@ -276,7 +396,7 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn run_in_bevy_state<T: bevy_ecs::schedule::StateData>(
         self,
         state: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystemDescriptor {
         self.into_conditional().run_in_bevy_state(state)
     }
 
@@ -284,21 +404,213 @@ pub trait IntoConditionalSystem<In, Out, Params>: IntoSystem<In, Out, Params> + 
     fn run_not_in_bevy_state<T: bevy_ecs::schedule::StateData>(
         self,
         state: T,
-    ) -> ConditionalSystem<Self::System> {
+    ) -> ConditionalSystemDescriptor {
         self.into_conditional().run_not_in_bevy_state(state)
     }
 }
 
-impl<S, In, Out, Params> IntoConditionalSystem<In, Out, Params> for S
+impl<S, Params> IntoConditionalSystem<Params> for S
 where
-    S: IntoSystem<In, Out, Params>,
+    S: IntoSystem<(), (), Params>,
 {
-    fn into_conditional(self) -> ConditionalSystem<Self::System> {
-        ConditionalSystem {
-            system: self.system(),
+    fn into_conditional(self) -> ConditionalSystemDescriptor {
+        ConditionalSystemDescriptor {
+            system: Box::new(self.system()),
             conditions: Vec::new(),
-            archetype_component_access: Default::default(),
-            component_access: Default::default(),
+            label_shits: Vec::new(),
         }
+    }
+}
+
+pub struct ConditionSet {
+    /// "applicator": closure that adds the condition to the system
+    conditions: Vec<Box<dyn Fn(&mut ConditionalSystemDescriptor)>>,
+}
+
+pub struct ConditionSystemSet {
+    systems: Vec<ConditionalSystemDescriptor>,
+    conditions: ConditionSet,
+}
+
+impl ConditionSet {
+    pub fn new() -> Self {
+        Self {
+            conditions: Vec::new(),
+        }
+    }
+
+    pub fn with_system<S, P>(self, system: S) -> ConditionSystemSet
+    where
+        S: AddConditionalToSet<ConditionSystemSet, P>,
+    {
+        let mut csset: ConditionSystemSet = self.into();
+        csset.add_system(system);
+        csset
+    }
+}
+
+impl ConditionSystemSet {
+    pub fn add_system<S, P>(&mut self, system: S)
+    where
+        S: AddConditionalToSet<ConditionSystemSet, P>,
+    {
+        system.add_to_set(self);
+    }
+    pub fn with_system<S, P>(mut self, system: S) -> Self
+    where
+        S: AddConditionalToSet<ConditionSystemSet, P>,
+    {
+        system.add_to_set(&mut self);
+        self
+    }
+}
+
+impl From<ConditionSet> for ConditionSystemSet {
+    fn from(cset: ConditionSet) -> ConditionSystemSet {
+        ConditionSystemSet {
+            systems: Vec::new(),
+            conditions: cset,
+        }
+    }
+}
+
+impl From<ConditionSet> for SystemSet {
+    fn from(_: ConditionSet) -> SystemSet {
+        SystemSet::new()
+    }
+}
+
+impl From<ConditionSystemSet> for SystemSet {
+    fn from(mut csset: ConditionSystemSet) -> SystemSet {
+        let mut sset = SystemSet::new();
+        for mut system in csset.systems.drain(..) {
+            for cond in csset.conditions.conditions.iter() {
+                cond(&mut system);
+            }
+            sset = sset.with_system(system);
+        }
+        sset
+    }
+}
+
+pub trait AddConditionalToSet<Set, Params> {
+    fn add_to_set(self, set: &mut Set);
+}
+
+impl AddConditionalToSet<ConditionSystemSet, ()> for ConditionalSystemDescriptor {
+    fn add_to_set(self, set: &mut ConditionSystemSet) {
+        set.systems.push(self);
+    }
+}
+
+impl<System, Params> AddConditionalToSet<ConditionSystemSet, Params> for System
+where System: IntoConditionalSystem<Params>,
+{
+    fn add_to_set(self, set: &mut ConditionSystemSet) {
+        set.systems.push(self.into_conditional());
+    }
+}
+
+impl ConditionSet {
+    /// Add a condition to this set, to be applied to all systems
+    pub fn run_if<Condition, Params>(mut self, condition: Condition) -> Self
+    where
+        Condition: IntoSystem<(), bool, Params> + Clone + 'static,
+    {
+        // create an "applicator" closure, that we can call many times
+        // to add the condition to each system
+        self.conditions.push(Box::new(move |system| {
+            let condition_clone = condition.clone();
+            let condition_system = condition_clone.system();
+            system.conditions.insert(0, Box::new(condition_system))
+        }));
+        self
+    }
+
+    /// Helper: add a condition, but flip its result
+    pub fn run_if_not<Condition, Params>(mut self, condition: Condition) -> Self
+    where
+        Condition: IntoSystem<(), bool, Params> + Clone + 'static,
+    {
+        self.conditions.push(Box::new(move |system| {
+            let condition_clone = condition.clone();
+            // PERF: is using system chaining here inefficient?
+            let condition_inverted = condition_clone.chain(move |In(x): In<bool>| !x);
+            system.conditions.insert(0, Box::new(condition_inverted))
+        }));
+        self
+    }
+
+    /// Helper: add a condition to run if there are events of the given type
+    pub fn run_on_event<T: Send + Sync + 'static>(self) -> Self {
+        self.run_if(move |ev: Res<Events<T>>| !ev.is_empty())
+    }
+
+    /// Helper: add a condition to run if a resource of a given type exists
+    pub fn run_if_resource_exists<T: Resource>(self) -> Self {
+        self.run_if(move |res: Option<Res<T>>| res.is_some())
+    }
+
+    /// Helper: add a condition to run if a resource of a given type does not exist
+    pub fn run_unless_resource_exists<T: Resource>(self) -> Self {
+        self.run_if(move |res: Option<Res<T>>| res.is_none())
+    }
+
+    /// Helper: add a condition to run if a resource equals the given value
+    pub fn run_if_resource_equals<T: Resource + PartialEq + Clone>(self, value: T) -> Self {
+        self.run_if(move |res: Option<Res<T>>| {
+            if let Some(res) = res {
+                *res == value
+            } else {
+                false
+            }
+        })
+    }
+
+    /// Helper: add a condition to run if a resource does not equal the given value
+    pub fn run_unless_resource_equals<T: Resource + PartialEq + Clone>(self, value: T) -> Self {
+        self.run_if(move |res: Option<Res<T>>| {
+            if let Some(res) = res {
+                *res != value
+            } else {
+                false
+            }
+        })
+    }
+
+    #[cfg(feature = "states")]
+    /// Helper: run in a specific state (checks the [`CurrentState`] resource)
+    pub fn run_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_if_resource_equals(CurrentState(state))
+    }
+
+    #[cfg(feature = "states")]
+    /// Helper: run when not in a specific state (checks the [`CurrentState`] resource)
+    pub fn run_not_in_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_unless_resource_equals(CurrentState(state))
+    }
+
+    #[cfg(feature = "bevy-compat")]
+    /// Helper: run in a specific Bevy state (checks the `State<T>` resource)
+    pub fn run_in_bevy_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_if(move |res: Option<Res<bevy_ecs::schedule::State<T>>>| {
+            if let Some(res) = res {
+                res.current() == &state
+            } else {
+                false
+            }
+        })
+    }
+
+    #[cfg(feature = "bevy-compat")]
+    /// Helper: run when not in a specific Bevy state (checks the `State<T>` resource)
+    pub fn run_not_in_bevy_state<T: bevy_ecs::schedule::StateData>(self, state: T) -> Self {
+        self.run_if(move |res: Option<Res<bevy_ecs::schedule::State<T>>>| {
+            if let Some(res) = res {
+                res.current() != &state
+            } else {
+                false
+            }
+        })
     }
 }
