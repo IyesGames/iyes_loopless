@@ -27,6 +27,10 @@ Notable user-facing changes with each release version will be described in this 
 ### Changed
  - Manually calling `.into_conditional()` on systems, to add conditions, is no longer required.
 
-# [0.1.0]: 2022-03-21
+## [0.1.0]: 2022-03-21
 
 Initial Release
+
+[0.2.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.2.0
+[0.1.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.1.1
+[0.1.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.1.0
