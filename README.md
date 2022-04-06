@@ -11,7 +11,7 @@ Version Compatibility Table:
 
 |Bevy Version|Crate Version|
 |------------|-------------|
-|`0.6`       |`0.1`        |
+|`0.6`       |`0.1`, `0.2` |
 
 ## How does this relate to the Bevy Stageless RFC?
 
