@@ -191,37 +191,42 @@ Bevy States.
 
 However, here we track states using two resource types:
  - `CurrentState(T)`: the current state you are in
- - `NextState(T)`: insert this (using `Commands`) whenever you want to change state
+ - `NextState(T)`: use this whenever you want to change state
 
 ### Registering the state type, how to add enter/exit systems
 
 To "drive" the states, you add a `StateTransitionStage` to your `App`. This
 is a Stage that will take care of performing state transitions and managing
 `CurrentState<T>`. It being a separate stage allows you to control at what
-point in your App state transitions happen.
+point in your App the transitions happen.
 
 You can add child stages to it, to run when entering or exiting different
 states. This is how you specify your "on enter/exit" systems. They are
 optional, you don't need them for every state value.
 
-When the transition stage runs, it will check if a `NextState` resource
-exists. If yes, it will remove it. If it contains a different value from
-the one in `CurrentState`, a transition will be performed:
+When the transition stage runs, it will use change detection to check if the
+`NextState` resource has been changed. If yes, a transition will be performed:
  - run the "exit stage" (if any) for the current state
  - change the value of `CurrentState`
  - run the "enter stage" (if any) for the next state
 
+The `StateTransitionStage` will ensure that both the `CurrentState` and
+`NextState` resources exist. It will insert them on first run, and re-insert
+them later if they are missing for whatever reason.
+
 ### Triggering a Transition
 
-Please do not manually insert or remove `CurrentState<T>`. It should be managed
-entirely by `StateTransitionStage`. It will insert it when it first runs.
+If you want to perform a state transition, simply change `NextState<T>`.
+You can either mutate the value directly, or re-insert a new resource (using
+`Commands` or direct world access). Either will work.
 
-If you want to perform a state transition, simply insert a `NextState<T>`.
-If you mutate `CurrentState<T>`, you will effectively force a transition
-without running the exit/enter systems (you probably don't want to do this).
+If you mutate `CurrentState<T>` directly, you will effectively bypass the
+transition mechanism. You will change the "active state" without running
+the exit/enter systems (you probably don't want to do this). Normally, you
+shouldn't do this. Let the transition stage manage its value.
 
-Multiple state transitions can be performed in a single frame, if you insert
-a new instance of `NextState` from within an exit/enter stage.
+Multiple state transitions can be performed in a single frame, if you change
+`NextState<T>` from within an exit/enter system.
 
 ### Update systems
 

@@ -90,6 +90,7 @@ fn main() {
             ConditionSet::new()
                 .run_in_state(GameState::InGame)
                 .with_system(back_to_menu_on_esc)
+                .with_system(clear_on_del)
                 .with_system(spin_sprites.run_if_not(spacebar_pressed))
                 .into()
         )
@@ -122,10 +123,18 @@ struct ExitButt;
 #[derive(Component)]
 struct EnterButt;
 
+/// Reset the in-game state when pressing delete
+fn clear_on_del(mut commands: Commands, kbd: Res<Input<KeyCode>>) {
+    if kbd.just_pressed(KeyCode::Delete) || kbd.just_pressed(KeyCode::Back) {
+        commands.insert_resource(NextState(GameState::InGame));
+    }
+}
+
 /// Transition back to menu on pressing Escape
-fn back_to_menu_on_esc(mut commands: Commands, kbd: Res<Input<KeyCode>>) {
+/// (here we show how to perform a state transition using ResMut)
+fn back_to_menu_on_esc(mut next: ResMut<NextState<GameState>>, kbd: Res<Input<KeyCode>>) {
     if kbd.just_pressed(KeyCode::Escape) {
-        commands.insert_resource(NextState(GameState::MainMenu));
+        *next = NextState(GameState::MainMenu);
     }
 }
 
@@ -225,8 +234,8 @@ fn butt_exit(mut ev: EventWriter<AppExit>) {
 }
 
 /// Handler for the Enter Game button
+/// (here we show how to perform a state transition using Commands)
 fn butt_game(mut commands: Commands) {
-    // queue state transition
     commands.insert_resource(NextState(GameState::InGame));
 }
 
