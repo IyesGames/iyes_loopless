@@ -180,6 +180,22 @@ Since this implementation does not use Run Criteria, you are free to use
 Run Criteria for other purposes. Or better yet: don't, and use the [Run
 Conditions](#run-conditions) from this crate instead! ;)
 
+### Fixed Timestep Info
+
+From within your fixed timestep systems, you can use `Res<FixedTimestepInfo>`
+to get info about the current fixed timestep parameters, like the timestep
+duration and amount of over-step.
+
+This resource is managed by the `FixedTimestepStage`. It will be inserted
+before your systems get run, and removed afterwards.
+
+```rust
+fn my_fixed_update(info: Res<FixedTimestepInfo>) {
+    println!("Fixed timestep duration: {:?} ({} Hz).", info.timestep(), info.rate());
+    println!("Overstepped by {:?} ({}%).", info.remaining(), info.overstep() * 100.0);
+}
+```
+
 ## States
 
 (see `examples/menu.rs` for a complete example)

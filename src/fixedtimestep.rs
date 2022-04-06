@@ -3,6 +3,33 @@ use std::time::Duration;
 use bevy_core::Time;
 use bevy_ecs::prelude::*;
 
+/// This type will be available as a resource, while a fixed timestep stage
+/// runs, to provide info about the current status of the fixed timestep.
+pub struct FixedTimestepInfo {
+    step: Duration,
+    accumulator: Duration,
+}
+
+impl FixedTimestepInfo {
+    /// The time duration of each timestep
+    pub fn timestep(&self) -> Duration {
+        self.step
+    }
+    /// The number of steps per second (Hz)
+    pub fn rate(&self) -> f64 {
+        1.0 / self.step.as_secs_f64()
+    }
+    /// The amount of time left over from the last timestep
+    pub fn remaining(&self) -> Duration {
+        self.accumulator
+    }
+    /// How much has the main game update "overstepped" the fixed timestep?
+    /// (how many more (fractional) timesteps are left over in the accumulator)
+    pub fn overstep(&self) -> f64 {
+        self.accumulator.as_secs_f64() / self.step.as_secs_f64()
+    }
+}
+
 /// A Stage that runs a number of child stages with a fixed timestep
 ///
 /// You can set the timestep duration. Every frame update, the time delta
@@ -66,7 +93,12 @@ impl Stage for FixedTimestepStage {
         while self.accumulator >= self.step {
             self.accumulator -= self.step;
             for stage in self.stages.iter_mut() {
+                world.insert_resource(FixedTimestepInfo {
+                    step: self.step,
+                    accumulator: self.accumulator,
+                });
                 stage.run(world);
+                world.remove_resource::<FixedTimestepInfo>();
             }
         }
     }
