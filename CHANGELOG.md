@@ -2,6 +2,12 @@
 
 Notable user-facing changes with each release version will be described in this file.
 
+## [0.2.1]: 2022-04-11
+
+### Added
+
+ - Fixed Timestep: optional EXPERIMENTAL "rate lock" algorithm (see api docs)
+
 ## [0.2.0]: 2022-04-06
 
 ### Added
