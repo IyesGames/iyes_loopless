@@ -146,9 +146,15 @@ impl Stage for FixedTimestepStage {
             n_steps += 1;
         }
 
-        if n_steps == 1 && self.lock_accum < self.rate_lock.0 {
-            self.lock_accum += 1;
-            self.accumulator = self.step / 2;
+        if n_steps == 1 {
+            if self.lock_accum < self.rate_lock.0 {
+                self.lock_accum += 1;
+            }
+            if self.lock_accum >= self.rate_lock.0 {
+                self.accumulator = self.step / 2;
+            }
+        } else {
+            self.lock_accum = 0;
         }
     }
 }
