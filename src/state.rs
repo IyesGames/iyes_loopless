@@ -77,7 +77,6 @@ impl<T: StateData> StateTransitionStage<T> {
 impl<T: StateData> Stage for StateTransitionStage<T> {
     fn run(&mut self, world: &mut World) {
         loop {
-            // let current = world.get_resource_or_insert_with(|| CurrentState(self.default.clone())).0.clone();
             let current = if let Some(res) = world.get_resource::<CurrentState<T>>() {
                 res.0.clone()
             } else {
@@ -95,10 +94,6 @@ impl<T: StateData> Stage for StateTransitionStage<T> {
             let next = world.remove_resource::<NextState<T>>();
 
             if let Some(NextState(next)) = next {
-                if current == next {
-                    break;
-                }
-
                 if let Some(stage) = self.exit_stages.get_mut(&current) {
                     stage.run(world);
                 }
