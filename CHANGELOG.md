@@ -2,6 +2,13 @@
 
 Notable user-facing changes with each release version will be described in this file.
 
+## [0.3.0]: 2022-04-13
+
+### Changed
+ - Reverted the `NextState` behavior to how it was in `0.1.x`. The resource has to be inserted/removed.
+   In retrospect, this is better UX and avoids bugs.
+   - However, support transitioning to the same state as the current.
+
 ## [0.2.1]: 2022-04-11
 
 ### Added
