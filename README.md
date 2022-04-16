@@ -125,6 +125,45 @@ If you need to use classic Bevy States, you can use these adapters to check them
  - `.run_in_bevy_state(state)`
  - `.run_not_in_bevy_state(state)`
 
+You can use Bevy labels for system ordering, as usual.
+
+There is also `ConditionSet` (similar to Bevy `SystemSet`) for easily applying
+many conditions and labels to many systems:
+
+```rust
+use bevy::prelude::*;
+use iyes_loopless::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_system(
+            notify_server
+                .run_if(in_multiplayer)
+                .run_if(on_mytimer)
+                // use bevy labels for ordering, as usual :)
+                // (must be added at the end, after the conditions)
+                .label("thing")
+                .before("thing2")
+        )
+        // You can easily apply many conditions to many systems
+        // using a `ConditionSet`:
+        .add_system_set(ConditionSet::new()
+            .run_if(in_multiplayer)
+            .run_if(other_condition)
+            // can also add Bevy ordering and labels (to all the systems)
+            // (must be added after the conditions)
+            .label("thing2")
+            .after("stuff")
+            .with_system(system1)
+            .with_system(system2)
+            .with_system(system3)
+            .into() // Converts into Bevy `SystemSet` (to add to App)
+        )
+        .run();
+}
+```
+
 ## Fixed Timestep
 
 This crate offers a fixed timestep implementation that uses the Bevy `Stage`
