@@ -241,7 +241,7 @@ impl ConditionalSystemDescriptor {
     where
         Condition: IntoSystem<(), bool, Params>,
     {
-        let condition_system = condition.system();
+        let condition_system = <Condition as IntoSystem<(), bool, Params>>::into_system(condition);
         self.conditions.push(Box::new(condition_system));
         self
     }
@@ -415,7 +415,7 @@ where
 {
     fn into_conditional(self) -> ConditionalSystemDescriptor {
         ConditionalSystemDescriptor {
-            system: Box::new(self.system()),
+            system: Box::new(<Self as IntoSystem<(), (), Params>>::into_system(self)),
             conditions: Vec::new(),
             label_shits: Vec::new(),
         }
@@ -521,7 +521,7 @@ impl ConditionSet {
         // to add the condition to each system
         self.conditions.push(Box::new(move |system| {
             let condition_clone = condition.clone();
-            let condition_system = condition_clone.system();
+            let condition_system = <Condition as IntoSystem<(), bool, Params>>::into_system(condition_clone);
             system.conditions.insert(0, Box::new(condition_system))
         }));
         self
