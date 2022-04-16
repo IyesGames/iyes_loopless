@@ -12,14 +12,12 @@ fn main() {
                 .run_if(in_multiplayer)
                 .run_if(on_mytimer)
                 // labels and ordering must come at the end
-                .after("mytick"),
+                .after(tick_mytimer),
         )
         .add_system(
             tick_mytimer
                 .run_if(in_multiplayer)
                 .run_if(spacebar_pressed)
-                // labels and ordering must come at the end
-                .label("mytick"),
         )
         .run();
 }
