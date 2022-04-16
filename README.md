@@ -267,7 +267,7 @@ You can add enter/exit systems to be executed on state transitions, using
 `.add_enter_system(state, system)` and `.add_exit_system(state, system)`.
 
 For advanced scenarios, you could add a custom stage type instead, using
-`.add_enter_stage(state, stage)` and `.add_exit_stage(state, stage)`.
+`.set_enter_stage(state, stage)` and `.set_exit_stage(state, stage)`.
 
 ### Triggering a Transition
 
