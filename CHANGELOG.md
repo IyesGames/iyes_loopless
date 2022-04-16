@@ -2,6 +2,15 @@
 
 Notable user-facing changes with each release version will be described in this file.
 
+## [0.4.0]: 2022-04-16
+
+## Added
+ - Extension trait to add ergonomic helpers to `App` for using states.
+   - (optional behind `app` feature, adds `bevy_app` dependency)
+
+## Changed
+ - Updated for Bevy 0.7
+
 ## [0.3.0]: 2022-04-13
 
 ### Changed
