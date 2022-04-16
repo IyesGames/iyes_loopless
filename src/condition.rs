@@ -22,12 +22,12 @@
 use std::borrow::Cow;
 
 use bevy_ecs::{
-    archetype::{Archetype, ArchetypeComponentId},
+    archetype::ArchetypeComponentId,
     component::ComponentId,
     event::Events,
     query::Access,
     schedule::{SystemSet, IntoSystemDescriptor, SystemLabel, ParallelSystemDescriptorCoercion, ParallelSystemDescriptor},
-    system::{In, IntoChainSystem, IntoSystem, Res, Resource, System, BoxedSystem},
+    system::{AsSystemLabel, In, IntoChainSystem, IntoSystem, Res, Resource, System, BoxedSystem},
     world::World,
 };
 
@@ -74,7 +74,7 @@ impl ConditionalSystemDescriptor {
             }
         }))
     }
-    pub fn add_before(&mut self, label: impl SystemLabel) {
+    pub fn add_before<Marker>(&mut self, label: impl AsSystemLabel<Marker> + 'static) {
         self.label_shits.push(Box::new(move |wa| {
             match wa {
                 BevyDescriptorWorkaround::Descriptor(x) => {
@@ -86,7 +86,7 @@ impl ConditionalSystemDescriptor {
             }
         }))
     }
-    pub fn add_after(&mut self, label: impl SystemLabel) {
+    pub fn add_after<Marker>(&mut self, label: impl AsSystemLabel<Marker> + 'static) {
         self.label_shits.push(Box::new(move |wa| {
             match wa {
                 BevyDescriptorWorkaround::Descriptor(x) => {
@@ -104,12 +104,12 @@ impl ConditionalSystemDescriptor {
         self
     }
 
-    pub fn before(mut self, label: impl SystemLabel) -> Self {
+    pub fn before<Marker>(mut self, label: impl AsSystemLabel<Marker> + 'static) -> Self {
         self.add_before(label);
         self
     }
 
-    pub fn after(mut self, label: impl SystemLabel) -> Self {
+    pub fn after<Marker>(mut self, label: impl AsSystemLabel<Marker> + 'static) -> Self {
         self.add_after(label);
         self
     }
@@ -177,13 +177,13 @@ impl System for ConditionalSystem {
         self.system.name()
     }
 
-    fn new_archetype(&mut self, archetype: &Archetype) {
+    fn update_archetype_component_access(&mut self, world: &World) {
         for condition_system in self.conditions.iter_mut() {
-            condition_system.new_archetype(archetype);
+            condition_system.update_archetype_component_access(world);
             self.archetype_component_access
                 .extend(condition_system.archetype_component_access());
         }
-        self.system.new_archetype(archetype);
+        self.system.update_archetype_component_access(world);
         self.archetype_component_access
             .extend(self.system.archetype_component_access());
     }
