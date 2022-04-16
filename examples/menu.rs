@@ -26,23 +26,6 @@ enum GameState {
 }
 
 fn main() {
-    // Add things that should happen on state transitions into their own stages
-
-    let mut enter_menu = SystemStage::parallel();
-    enter_menu.add_system(setup_menu);
-    enter_menu.add_system(setup_ui_camera);
-
-    let mut exit_menu = SystemStage::parallel();
-    exit_menu.add_system(despawn_with::<MainMenu>);
-    exit_menu.add_system(despawn_with::<UiCamera>);
-
-    let mut enter_game = SystemStage::parallel();
-    enter_game.add_system(setup_game_camera);
-
-    let mut exit_game = SystemStage::parallel();
-    exit_game.add_system(despawn_with::<MySprite>);
-    exit_game.add_system(despawn_with::<GameCamera>);
-
     // stage for anything we want to do on a fixed timestep
     let mut fixedupdate = SystemStage::parallel();
     fixedupdate.add_system(
@@ -55,25 +38,24 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins)
-        // Add the "driver" stage that will perform state transitions
-        // After `CoreStage::PreUpdate` is a good place to put it, so that
-        // all the states are settled before we run any of our own systems.
-        .add_stage_after(
-            CoreStage::PreUpdate,
-            "TransitionStage",
-            StateTransitionStage::new(GameState::MainMenu)
-                .with_enter_stage(GameState::MainMenu, enter_menu)
-                .with_exit_stage(GameState::MainMenu, exit_menu)
-                .with_enter_stage(GameState::InGame, enter_game)
-                .with_exit_stage(GameState::InGame, exit_game),
-        )
-        // If we had more state types, we would add transition stages for them too...
+        .add_loopless_state(GameState::MainMenu)
         // Add a FixedTimestep, cuz we can!
         .add_stage_before(
             CoreStage::Update,
             "FixedUpdate",
             FixedTimestepStage::from_stage(Duration::from_millis(125), fixedupdate),
         )
+        // menu setup (state enter) systems
+        .add_enter_system(&GameState::MainMenu, setup_menu)
+        .add_enter_system(&GameState::MainMenu, setup_ui_camera)
+        // menu cleanup (state exit) systems
+        .add_exit_system(&GameState::MainMenu, despawn_with::<MainMenu>)
+        .add_exit_system(&GameState::MainMenu, despawn_with::<UiCamera>)
+        // game setup (state enter) systems
+        .add_enter_system(&GameState::InGame, setup_game_camera)
+        // game cleanup (state exit) systems
+        .add_exit_system(&GameState::InGame, despawn_with::<MySprite>)
+        .add_exit_system(&GameState::InGame, despawn_with::<GameCamera>)
         // menu stuff
         .add_system_set(
             ConditionSet::new()

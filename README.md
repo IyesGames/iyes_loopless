@@ -209,32 +209,40 @@ However, here we track states using two resource types:
  - `CurrentState(T)`: the current state you are in
  - `NextState(T)`: insert this (using `Commands`) whenever you want to change state
 
-### Registering the state type, how to add enter/exit systems
+### Registering the state type
 
-To "drive" the states, you add a `StateTransitionStage` to your `App`. This
-is a Stage that will take care of performing state transitions and managing
-`CurrentState<T>`. It being a separate stage allows you to control at what
-point in your App state transitions happen.
+You need to add the state to your `App` using `.add_loopless_state(value)`
+with the initial state value. This helper method adds a special stage type
+(`StateTransitionStage`) that is responsible for performing state transitions.
+By default, it is added before `CoreStage::Update`. If you would like the
+transitions to be executed elsewhere in the app schedule, there are other
+helper methods that let you specify the position.
 
-You can add child stages to it, to run when entering or exiting different
-states. This is how you specify your "on enter/exit" systems. They are
-optional, you don't need them for every state value.
+For advanced use cases, you could construct and add the `StateTransitionStage`
+manually, without the helper method.
 
-When the transition stage runs, it will check if a `NextState` resource
-exists. If yes, it will remove it. If it contains a different value from
-the one in `CurrentState`, a transition will be performed:
+### Enter/Exit Systems
+
+You can add enter/exit systems to be executed on state transitions, using
+`.add_enter_system(state, system)` and `.add_exit_system(state, system)`.
+
+For advanced scenarios, you could add a custom stage type instead, using
+`.add_enter_stage(state, stage)` and `.add_exit_stage(state, stage)`.
+
+### Triggering a Transition
+
+When the `StateTransitionStage` runs, it will check if a `NextState` resource
+exists. If yes, it will remove it and perform a transition:
  - run the "exit stage" (if any) for the current state
  - change the value of `CurrentState`
  - run the "enter stage" (if any) for the next state
-
-### Triggering a Transition
 
 Please do not manually insert or remove `CurrentState<T>`. It should be managed
 entirely by `StateTransitionStage`. It will insert it when it first runs.
 
 If you want to perform a state transition, simply insert a `NextState<T>`.
-If you mutate `CurrentState<T>`, you will effectively force a transition
-without running the exit/enter systems (you probably don't want to do this).
+If you mutate `CurrentState<T>`, you will effectively change state without
+running the exit/enter systems (you probably don't want to do this).
 
 Multiple state transitions can be performed in a single frame, if you insert
 a new instance of `NextState` from within an exit/enter stage.
@@ -260,20 +268,6 @@ enum GameState {
 }
 
 fn main() {
-    // prepare any stages for our transitions:
-
-    let mut enter_menu = SystemStage::parallel();
-    enter_menu.add_system(setup_menu);
-    // ...
-
-    let mut exit_menu = SystemStage::parallel();
-    exit_menu.add_system(despawn_menu);
-    // ...
-
-    let mut enter_game = SystemStage::parallel();
-    enter_game.add_system(setup_game);
-    // ...
-
     // stage for anything we want to do on a fixed timestep
     let mut fixedupdate = SystemStage::parallel();
     fixedupdate.add_system(
@@ -284,18 +278,9 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins)
-        // Add the "driver" stage that will perform state transitions
-        // After `CoreStage::PreUpdate` is a good place to put it, so that
-        // all the states are settled before we run any of our own systems.
-        .add_stage_after(
-            CoreStage::PreUpdate,
-            "TransitionStage",
-            StateTransitionStage::new(GameState::MainMenu)
-                .with_enter_stage(GameState::MainMenu, enter_menu)
-                .with_exit_stage(GameState::MainMenu, exit_menu)
-                .with_enter_stage(GameState::InGame, enter_game)
-        )
-        // If we had more state types, we would add transition stages for them too...
+        // Add our state type
+        .add_loopless_state(GameState::MainMenu)
+        // If we had more state types, we would add them too...
 
         // Add a FixedTimestep, cuz we can!
         .add_stage_before(
@@ -307,6 +292,11 @@ fn main() {
         // Add our various systems
         .add_system(menu_stuff.run_in_state(GameState::MainMenu))
         .add_system(animate.run_in_state(GameState::InGame))
+
+        // On states Enter and Exit
+        .add_enter_system(&GameState::MainMenu, setup_menu)
+        .add_exit_system(&GameState::MainMenu, despawn_menu)
+        .add_enter_system(&GameState::InGame, setup_game)
 
         .run();
 }
