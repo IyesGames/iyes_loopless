@@ -28,11 +28,11 @@ app = [
 ]
 
 [dependencies]
-bevy_ecs = "0.7.0"
-bevy_app = { version = "0.7.0", optional = true }
-bevy_core = { version = "0.7.0", optional = true }
-bevy_utils = { version = "0.7.0", optional = true }
+bevy_ecs = { git = "https://github.com/bevyengine/bevy" }
+bevy_app = { git = "https://github.com/bevyengine/bevy", optional = true }
+bevy_core = { git = "https://github.com/bevyengine/bevy", optional = true }
+bevy_utils = { git = "https://github.com/bevyengine/bevy", optional = true }
 
 [dev-dependencies]
-bevy = "0.7.0"
+bevy = { git = "https://github.com/bevyengine/bevy" }
 rand = "0.8.5"
