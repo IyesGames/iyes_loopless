@@ -5,7 +5,7 @@ pub mod fixedtimestep;
 pub mod state;
 
 pub mod prelude {
-    pub use crate::condition::{IntoConditionalSystem, ConditionSet, AddConditionalToSet};
+    pub use crate::condition::{ConditionHelpers, IntoConditionalSystem, ConditionSet, AddConditionalToSet};
     #[cfg(feature = "fixedtimestep")]
     pub use crate::fixedtimestep::{FixedTimestepInfo, FixedTimestepStage};
     #[cfg(feature = "states")]
