@@ -2,6 +2,15 @@
 
 Notable user-facing changes with each release version will be described in this file.
 
+## [0.5.0]: 2022-04-22
+
+## Added
+ - Support for conditional exclusive systems, using the `IntoConditionalExclusiveSystem` trait
+
+## Changed
+ - `.add_{enter,exit}_system` App helpers no longer use a `&` reference to the state
+ - The `.run_if*` methods are now in trait `ConditionHelpers`, not inherent on the type
+
 ## [0.4.0]: 2022-04-16
 
 ## Added
@@ -53,6 +62,9 @@ Notable user-facing changes with each release version will be described in this 
 
 Initial Release
 
+[0.5.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.5.0
+[0.4.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.4.0
+[0.3.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.3.0
 [0.2.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.2.0
 [0.1.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.1.1
 [0.1.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.1.0
