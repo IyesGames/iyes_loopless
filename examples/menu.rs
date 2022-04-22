@@ -46,16 +46,16 @@ fn main() {
             FixedTimestepStage::from_stage(Duration::from_millis(125), fixedupdate),
         )
         // menu setup (state enter) systems
-        .add_enter_system(&GameState::MainMenu, setup_menu)
-        .add_enter_system(&GameState::MainMenu, setup_ui_camera)
+        .add_enter_system(GameState::MainMenu, setup_menu)
+        .add_enter_system(GameState::MainMenu, setup_ui_camera)
         // menu cleanup (state exit) systems
-        .add_exit_system(&GameState::MainMenu, despawn_with::<MainMenu>)
-        .add_exit_system(&GameState::MainMenu, despawn_with::<UiCamera>)
+        .add_exit_system(GameState::MainMenu, despawn_with::<MainMenu>)
+        .add_exit_system(GameState::MainMenu, despawn_with::<UiCamera>)
         // game setup (state enter) systems
-        .add_enter_system(&GameState::InGame, setup_game_camera)
+        .add_enter_system(GameState::InGame, setup_game_camera)
         // game cleanup (state exit) systems
-        .add_exit_system(&GameState::InGame, despawn_with::<MySprite>)
-        .add_exit_system(&GameState::InGame, despawn_with::<GameCamera>)
+        .add_exit_system(GameState::InGame, despawn_with::<MySprite>)
+        .add_exit_system(GameState::InGame, despawn_with::<GameCamera>)
         // menu stuff
         .add_system_set(
             ConditionSet::new()

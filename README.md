@@ -334,9 +334,9 @@ fn main() {
         .add_system(animate.run_in_state(GameState::InGame))
 
         // On states Enter and Exit
-        .add_enter_system(&GameState::MainMenu, setup_menu)
-        .add_exit_system(&GameState::MainMenu, despawn_menu)
-        .add_enter_system(&GameState::InGame, setup_game)
+        .add_enter_system(GameState::MainMenu, setup_menu)
+        .add_exit_system(GameState::MainMenu, despawn_menu)
+        .add_enter_system(GameState::InGame, setup_game)
 
         .run();
 }
