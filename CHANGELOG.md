@@ -2,22 +2,27 @@
 
 Notable user-facing changes with each release version will be described in this file.
 
+## [0.5.1]: 2022-04-24
+
+### Added
+ - Support for labels/ordering on `ConditionSet`
+
 ## [0.5.0]: 2022-04-22
 
-## Added
+### Added
  - Support for conditional exclusive systems, using the `IntoConditionalExclusiveSystem` trait
 
-## Changed
+### Changed
  - `.add_{enter,exit}_system` App helpers no longer use a `&` reference to the state
  - The `.run_if*` methods are now in trait `ConditionHelpers`, not inherent on the type
 
 ## [0.4.0]: 2022-04-16
 
-## Added
+### Added
  - Extension trait to add ergonomic helpers to `App` for using states.
    - (optional behind `app` feature, adds `bevy_app` dependency)
 
-## Changed
+### Changed
  - Updated for Bevy 0.7
 
 ## [0.3.0]: 2022-04-13
@@ -62,9 +67,11 @@ Notable user-facing changes with each release version will be described in this 
 
 Initial Release
 
+[0.5.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.5.1
 [0.5.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.5.0
 [0.4.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.4.0
 [0.3.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.3.0
+[0.2.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.2.1
 [0.2.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.2.0
 [0.1.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.1.1
 [0.1.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.1.0
