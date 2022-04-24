@@ -47,10 +47,8 @@ fn main() {
         )
         // menu setup (state enter) systems
         .add_enter_system(GameState::MainMenu, setup_menu)
-        .add_enter_system(GameState::MainMenu, setup_ui_camera)
         // menu cleanup (state exit) systems
         .add_exit_system(GameState::MainMenu, despawn_with::<MainMenu>)
-        .add_exit_system(GameState::MainMenu, despawn_with::<UiCamera>)
         // game setup (state enter) systems
         .add_enter_system(GameState::InGame, setup_game_camera)
         // game cleanup (state exit) systems
@@ -78,6 +76,8 @@ fn main() {
         )
         // our other various systems:
         .add_system(debug_current_state)
+        // setup our UI camera globally at startup and keep it alive at all times
+        .add_startup_system(setup_ui_camera)
         .run();
 }
 
@@ -88,10 +88,6 @@ struct MySprite;
 /// Marker for the main menu entity
 #[derive(Component)]
 struct MainMenu;
-
-/// Marker for the UI camera entity
-#[derive(Component)]
-struct UiCamera;
 
 /// Marker for the main game camera entity
 #[derive(Component)]
@@ -165,7 +161,8 @@ fn setup_ui_camera(mut commands: Commands) {
 
 /// Spawn the game camera
 fn setup_game_camera(mut commands: Commands) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d())
+        .insert(GameCamera);
 }
 
 /// Rotate all the sprites
