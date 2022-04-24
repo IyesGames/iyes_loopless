@@ -152,10 +152,12 @@ fn main() {
         // You can easily apply many conditions to many systems
         // using a `ConditionSet`:
         .add_system_set(ConditionSet::new()
+            // all the conditions, and any labels/ordering
+            // must be added before adding the systems
+            // (helps avoid confusion and accidents)
+            // (makes it clear they apply to all systems in the set)
             .run_if(in_multiplayer)
             .run_if(other_condition)
-            // can also add Bevy ordering and labels (to all the systems)
-            // (must be added after the conditions)
             .label("thing2")
             .after("stuff")
             .with_system(system1)

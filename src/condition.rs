@@ -587,6 +587,8 @@ where
 pub struct ConditionSet {
     /// "applicator": closure that adds the condition to the system
     conditions: Vec<Box<dyn Fn(&mut ConditionalSystemDescriptor)>>,
+    /// label applicator
+    labellers: Vec<Box<dyn FnOnce(SystemSet) -> SystemSet>>,
 }
 
 pub struct ConditionSystemSet {
@@ -598,6 +600,7 @@ impl ConditionSet {
     pub fn new() -> Self {
         Self {
             conditions: Vec::new(),
+            labellers: Vec::new(),
         }
     }
 
@@ -608,6 +611,21 @@ impl ConditionSet {
         let mut csset: ConditionSystemSet = self.into();
         csset.add_system(system);
         csset
+    }
+
+    pub fn label(mut self, label: impl SystemLabel) -> Self {
+        self.labellers.push(Box::new(move |set: SystemSet| set.label(label)));
+        self
+    }
+
+    pub fn before<Marker>(mut self, label: impl AsSystemLabel<Marker> + 'static) -> Self {
+        self.labellers.push(Box::new(move |set: SystemSet| set.before(label.as_system_label())));
+        self
+    }
+
+    pub fn after<Marker>(mut self, label: impl AsSystemLabel<Marker> + 'static) -> Self {
+        self.labellers.push(Box::new(move |set: SystemSet| set.after(label.as_system_label())));
+        self
     }
 }
 
@@ -645,6 +663,9 @@ impl From<ConditionSet> for SystemSet {
 impl From<ConditionSystemSet> for SystemSet {
     fn from(mut csset: ConditionSystemSet) -> SystemSet {
         let mut sset = SystemSet::new();
+        for labeller in csset.conditions.labellers.into_iter() {
+            sset = labeller(sset);
+        }
         for mut system in csset.systems.drain(..) {
             for cond in csset.conditions.conditions.iter() {
                 cond(&mut system);
