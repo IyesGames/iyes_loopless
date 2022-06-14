@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use iyes_loopless::prelude::*;
 
 use bevy::app::AppExit;
-use bevy::input::system::exit_on_esc_system;
+use bevy::window::close_on_esc;
 
 use std::time::Duration;
 
@@ -50,7 +50,7 @@ fn main() {
         // menu cleanup (state exit) systems
         .add_exit_system(GameState::MainMenu, despawn_with::<MainMenu>)
         // game setup (state enter) systems
-        .add_enter_system(GameState::InGame, setup_game_camera)
+        .add_enter_system(GameState::MainMenu, setup_camera)
         // game cleanup (state exit) systems
         .add_exit_system(GameState::InGame, despawn_with::<MySprite>)
         .add_exit_system(GameState::InGame, despawn_with::<GameCamera>)
@@ -58,12 +58,12 @@ fn main() {
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::MainMenu)
-                .with_system(exit_on_esc_system)
+                .with_system(close_on_esc)
                 .with_system(butt_interact_visual)
                 // our menu button handlers
                 .with_system(butt_exit.run_if(on_butt_interact::<ExitButt>))
                 .with_system(butt_game.run_if(on_butt_interact::<EnterButt>))
-                .into()
+                .into(),
         )
         // in-game stuff
         .add_system_set(
@@ -72,12 +72,10 @@ fn main() {
                 .with_system(back_to_menu_on_esc)
                 .with_system(clear_on_del)
                 .with_system(spin_sprites.run_if_not(spacebar_pressed))
-                .into()
+                .into(),
         )
         // our other various systems:
         .add_system(debug_current_state)
-        // setup our UI camera globally at startup and keep it alive at all times
-        .add_startup_system(setup_ui_camera)
         .run();
 }
 
@@ -154,14 +152,10 @@ fn spawn_sprite(mut commands: Commands) {
         .insert(MySprite);
 }
 
-/// Spawn the UI camera
-fn setup_ui_camera(mut commands: Commands) {
-    commands.spawn_bundle(UiCameraBundle::default());
-}
-
 /// Spawn the game camera
-fn setup_game_camera(mut commands: Commands) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d())
+fn setup_camera(mut commands: Commands) {
+    commands
+        .spawn_bundle(Camera2dBundle::default())
         .insert(GameCamera);
 }
 
@@ -222,8 +216,8 @@ fn setup_menu(mut commands: Commands, ass: Res<AssetServer>) {
     let butt_style = Style {
         justify_content: JustifyContent::Center,
         align_items: AlignItems::Center,
-        padding: Rect::all(Val::Px(8.0)),
-        margin: Rect::all(Val::Px(4.0)),
+        padding: UiRect::all(Val::Px(8.0)),
+        margin: UiRect::all(Val::Px(4.0)),
         flex_grow: 1.0,
         ..Default::default()
     };
@@ -238,7 +232,7 @@ fn setup_menu(mut commands: Commands, ass: Res<AssetServer>) {
             color: UiColor(Color::rgb(0.5, 0.5, 0.5)),
             style: Style {
                 size: Size::new(Val::Auto, Val::Auto),
-                margin: Rect::all(Val::Auto),
+                margin: UiRect::all(Val::Auto),
                 align_self: AlignSelf::Center,
                 flex_direction: FlexDirection::ColumnReverse,
                 //align_items: AlignItems::Stretch,
