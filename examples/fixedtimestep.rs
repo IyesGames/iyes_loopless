@@ -41,8 +41,16 @@ struct MySprite;
 
 /// Every fixed timestep, print info about the timestep parameters
 fn debug_fixed_timestep(info: Res<FixedTimestepInfo>) {
-    println!("Fixed timestep duration: {:?} ({} Hz).", info.timestep(), info.rate());
-    println!("Overstepped by {:.2?} ({:.2}%).", info.remaining(), info.overstep() * 100.0);
+    println!(
+        "Fixed timestep duration: {:?} ({} Hz).",
+        info.timestep(),
+        info.rate()
+    );
+    println!(
+        "Overstepped by {:.2?} ({:.2}%).",
+        info.remaining(),
+        info.overstep() * 100.0
+    );
 }
 
 /// Every frame, print if new MySprites have been spawned
@@ -98,5 +106,5 @@ fn reposition_entities(mut q: Query<&mut Transform, With<MySprite>>) {
 }
 
 fn setup_camera(mut commands: Commands) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(Camera2dBundle::default());
 }
