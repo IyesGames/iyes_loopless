@@ -25,6 +25,7 @@ use bevy_ecs::{
     archetype::ArchetypeComponentId,
     component::ComponentId,
     event::Events,
+    prelude::Local,
     query::Access,
     schedule::{SystemSet, IntoSystemDescriptor, SystemLabel, ParallelSystemDescriptorCoercion, ParallelSystemDescriptor},
     system::{AsSystemLabel, In, IntoChainSystem, IntoSystem, Res, Resource, System, BoxedSystem, ExclusiveSystem, IntoExclusiveSystem},
@@ -737,6 +738,32 @@ impl ConditionSet {
     /// Helper: add a condition to run if a resource of a given type does not exist
     pub fn run_unless_resource_exists<T: Resource>(self) -> Self {
         self.run_if(move |res: Option<Res<T>>| res.is_none())
+    }
+
+    /// Helper: add a condition to run if a resource was added
+    pub fn run_if_resource_added<T: Resource>(self) -> Self {
+        self.run_if(move |res: Option<Res<T>>| {
+            if let Some(res) = res {
+                res.is_added()
+            } else {
+                false
+            }
+        })
+    }
+
+    /// Helper: add a condition to run if a resource was removed
+    pub fn run_if_resource_removed<T: Resource>(self) -> Self {
+        self.run_if(move |mut existed: Local<bool>, res: Option<Res<T>>| {
+            if res.is_some() {
+                *existed = true;
+                false
+            } else if *existed {
+                *existed = false;
+                true
+            } else {
+                false
+            }
+        })
     }
 
     /// Helper: add a condition to run if a resource equals the given value
