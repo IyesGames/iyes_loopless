@@ -13,7 +13,7 @@ Version Compatibility Table:
 |------------|-------------------|
 |`main`      |`bevy_main`        |
 |`0.7`       |`main`             |
-|`0.7`       |`0.4`, `0.5`       |
+|`0.7`       |`0.4`, `0.5`, `0.6`|
 |`0.6`       |`0.1`, `0.2`, `0.3`|
 
 ## How does this relate to the Bevy Stageless RFC?

@@ -2,6 +2,15 @@
 
 Notable user-facing changes with each release version will be described in this file.
 
+## [0.6.0]: 2022-06-15
+
+### Added
+ - `add_{enter,exit}_system_set` helpers for adding multiple systems to the enter/exit stages of states.
+ - `run_if_resource_added` and `run_if_resource_removed` run conditions (thanks @Shatur)
+
+### Changed
+ - It is now possible to reconfigure fixed timestep durations at runtime, by modifying the `step` field in `FixedTimestepInfo`.
+
 ## [0.5.1]: 2022-04-24
 
 ### Added
