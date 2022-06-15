@@ -5,6 +5,10 @@ use bevy_ecs::prelude::*;
 
 /// This type will be available as a resource, while a fixed timestep stage
 /// runs, to provide info about the current status of the fixed timestep.
+///
+/// If you modify the step value, the fixed timestep driver stage will
+/// reconfigure itself to respect it. Your new timestep duration will be
+/// used starting from the next update cycle.
 pub struct FixedTimestepInfo {
     step: Duration,
     accumulator: Duration,
@@ -141,7 +145,11 @@ impl Stage for FixedTimestepStage {
                     accumulator: self.accumulator,
                 });
                 stage.run(world);
-                world.remove_resource::<FixedTimestepInfo>();
+                if let Some(info) = world.remove_resource::<FixedTimestepInfo>() {
+                    // update our actual step duration, in case the user has
+                    // modified it in the info resource
+                    self.step = info.step;
+                }
             }
             n_steps += 1;
         }
