@@ -340,6 +340,32 @@ pub trait ConditionHelpers: Sized {
         self.run_if(move |res: Option<Res<T>>| res.is_none())
     }
 
+    /// Helper: add a condition to run if a resource was added
+    fn run_if_resource_added<T: Resource>(self) -> Self {
+        self.run_if(move |res: Option<Res<T>>| {
+            if let Some(res) = res {
+                res.is_added()
+            } else {
+                false
+            }
+        })
+    }
+
+    /// Helper: add a condition to run if a resource was removed
+    fn run_if_resource_removed<T: Resource>(self) -> Self {
+        self.run_if(move |mut existed: Local<bool>, res: Option<Res<T>>| {
+            if res.is_some() {
+                *existed = true;
+                false
+            } else if *existed {
+                *existed = false;
+                true
+            } else {
+                false
+            }
+        })
+    }
+
     /// Helper: add a condition to run if a resource equals the given value
     fn run_if_resource_equals<T: Resource + PartialEq>(self, value: T) -> Self {
         self.run_if(move |res: Option<Res<T>>| {
@@ -430,6 +456,14 @@ pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
 
     fn run_unless_resource_exists<T: Resource>(self) -> ConditionalSystemDescriptor {
         self.into_conditional().run_unless_resource_exists::<T>()
+    }
+
+    fn run_if_resource_added<T: Resource>(self) -> ConditionalSystemDescriptor {
+        self.into_conditional().run_if_resource_added::<T>()
+    }
+
+    fn run_if_resource_removed<T: Resource>(self) -> ConditionalSystemDescriptor {
+        self.into_conditional().run_if_resource_removed::<T>()
     }
 
     fn run_if_resource_equals<T: Resource + PartialEq>(
@@ -523,6 +557,14 @@ pub trait IntoConditionalExclusiveSystem<Params, SystemType>: IntoExclusiveSyste
 
     fn run_unless_resource_exists<T: Resource>(self) -> ConditionalExclusiveSystem {
         self.into_conditional().run_unless_resource_exists::<T>()
+    }
+
+    fn run_if_resource_added<T: Resource>(self) -> ConditionalExclusiveSystem {
+        self.into_conditional().run_if_resource_added::<T>()
+    }
+
+    fn run_if_resource_removed<T: Resource>(self) -> ConditionalExclusiveSystem {
+        self.into_conditional().run_if_resource_removed::<T>()
     }
 
     fn run_if_resource_equals<T: Resource + PartialEq>(
