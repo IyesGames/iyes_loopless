@@ -1,4 +1,4 @@
-use bevy_ecs::schedule::{Stage, StateData, IntoSystemDescriptor, SystemStage};
+use bevy_ecs::schedule::{Stage, StateData, IntoSystemDescriptor, SystemSet, SystemStage};
 use bevy_ecs::world::World;
 use bevy_utils::HashMap;
 
@@ -114,6 +114,50 @@ impl<T: StateData> StateTransitionStage<T> {
         stage.add_system(system);
     }
 
+    /// Add a system set with multiple systems to run when entering the given state
+    ///
+    /// In practice, you probably want to use [`ConditionSet`] to construct this,
+    /// and not use Bevy's builtin run criteria, etc.
+    ///
+    /// Does not work if you have set a custom enter stage
+    /// of type other than `SystemStage`.
+    ///
+    /// Will create the enter `SystemStage` if it does not exist.
+    pub fn add_enter_system_set(&mut self, state: T, system_set: SystemSet) {
+        if !self.enter_stages.contains_key(&state) {
+            self.set_enter_stage(state.clone(), SystemStage::parallel());
+        }
+
+        let stage = self.enter_stages.get_mut(&state)
+            .expect("No enter stage for state.")
+            .downcast_mut::<SystemStage>()
+            .expect("State enter stage is not a SystemStage");
+
+        stage.add_system_set(system_set);
+    }
+
+    /// Add a system set with multiple systems to run when exiting the given state
+    ///
+    /// In practice, you probably want to use [`ConditionSet`] to construct this,
+    /// and not use Bevy's builtin run criteria, etc.
+    ///
+    /// Does not work if you have set a custom exit stage
+    /// of type other than `SystemStage`.
+    ///
+    /// Will create the exit `SystemStage` if it does not exist.
+    pub fn add_exit_system_set(&mut self, state: T, system_set: SystemSet) {
+        if !self.exit_stages.contains_key(&state) {
+            self.set_exit_stage(state.clone(), SystemStage::parallel());
+        }
+
+        let stage = self.exit_stages.get_mut(&state)
+            .expect("No exit stage for state.")
+            .downcast_mut::<SystemStage>()
+            .expect("State exit stage is not a SystemStage");
+
+        stage.add_system_set(system_set);
+    }
+
     /// Builder version of `add_enter_system`
     pub fn with_enter_system<Params>(mut self, state: T, system: impl IntoSystemDescriptor<Params>) -> Self {
         self.add_enter_system(state, system);
@@ -123,6 +167,18 @@ impl<T: StateData> StateTransitionStage<T> {
     /// Builder version of `add_exit_system`
     pub fn with_exit_system<Params>(mut self, state: T, system: impl IntoSystemDescriptor<Params>) -> Self {
         self.add_exit_system(state, system);
+        self
+    }
+
+    /// Builder version of `add_enter_system_set`
+    pub fn with_enter_system_set(mut self, state: T, system_set: SystemSet) -> Self {
+        self.add_enter_system_set(state, system_set);
+        self
+    }
+
+    /// Builder version of `add_exit_system_set`
+    pub fn with_exit_system_set(mut self, state: T, system_set: SystemSet) -> Self {
+        self.add_exit_system_set(state, system_set);
         self
     }
 }
@@ -167,7 +223,7 @@ impl<T: StateData> Stage for StateTransitionStage<T> {
 pub mod app {
     use std::any::TypeId;
 
-    use bevy_ecs::schedule::{StageLabel, Stage, StateData, IntoSystemDescriptor};
+    use bevy_ecs::schedule::{StageLabel, Stage, StateData, IntoSystemDescriptor, SystemSet};
     use bevy_app::{App, CoreStage};
 
     use super::StateTransitionStage;
@@ -201,6 +257,16 @@ pub mod app {
         /// Requires the stage to be labeled with a `StateTransitionStageLabel`
         /// (as done by the `add_loopless_state*` methods).
         fn add_exit_system<T: StateData, Params>(&mut self, state: T, system: impl IntoSystemDescriptor<Params>) -> &mut App;
+        /// Add an enter system set for the given state
+        ///
+        /// Requires the stage to be labeled with a `StateTransitionStageLabel`
+        /// (as done by the `add_loopless_state*` methods).
+        fn add_enter_system_set<T: StateData>(&mut self, state: T, system_set: SystemSet) -> &mut App;
+        /// Add an exit system set for the given state
+        ///
+        /// Requires the stage to be labeled with a `StateTransitionStageLabel`
+        /// (as done by the `add_loopless_state*` methods).
+        fn add_exit_system_set<T: StateData>(&mut self, state: T, system_set: SystemSet) -> &mut App;
         /// Add a custom stage to execute for the given state
         ///
         /// Requires the stage to be labeled with a `StateTransitionStageLabel`
@@ -245,6 +311,18 @@ pub mod app {
             let stage = self.schedule.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
                 .expect("State Transiton Stage not found (assuming auto-added label)");
             stage.add_exit_system(state, system);
+            self
+        }
+        fn add_enter_system_set<T: StateData>(&mut self, state: T, system_set: SystemSet) -> &mut App {
+            let stage = self.schedule.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
+                .expect("State Transiton Stage not found (assuming auto-added label)");
+            stage.add_enter_system_set(state, system_set);
+            self
+        }
+        fn add_exit_system_set<T: StateData>(&mut self, state: T, system_set: SystemSet) -> &mut App {
+            let stage = self.schedule.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
+                .expect("State Transiton Stage not found (assuming auto-added label)");
+            stage.add_exit_system_set(state, system_set);
             self
         }
         fn set_enter_stage<T: StateData>(&mut self, state: T, enter_stage: impl Stage) -> &mut App {
