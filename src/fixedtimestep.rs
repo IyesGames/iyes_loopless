@@ -10,7 +10,7 @@ use bevy_ecs::prelude::*;
 /// reconfigure itself to respect it. Your new timestep duration will be
 /// used starting from the next update cycle.
 pub struct FixedTimestepInfo {
-    step: Duration,
+    pub step: Duration,
     accumulator: Duration,
 }
 
