@@ -11,7 +11,7 @@ use bevy_ecs::prelude::*;
 /// used starting from the next update cycle.
 pub struct FixedTimestepInfo {
     pub step: Duration,
-    accumulator: Duration,
+    pub accumulator: Duration,
 }
 
 impl FixedTimestepInfo {
@@ -149,6 +149,7 @@ impl Stage for FixedTimestepStage {
                     // update our actual step duration, in case the user has
                     // modified it in the info resource
                     self.step = info.step;
+                    self.accumulator = info.accumulator;
                 }
             }
             n_steps += 1;
