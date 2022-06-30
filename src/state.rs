@@ -303,37 +303,149 @@ pub mod app {
         }
         fn add_enter_system<T: StateData, Params>(&mut self, state: T, system: impl IntoSystemDescriptor<Params>) -> &mut App {
             let stage = self.schedule.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
-                .expect("State Transiton Stage not found (assuming auto-added label)");
+                .expect("State Transition Stage not found (assuming auto-added label)");
             stage.add_enter_system(state, system);
             self
         }
         fn add_exit_system<T: StateData, Params>(&mut self, state: T, system: impl IntoSystemDescriptor<Params>) -> &mut App {
             let stage = self.schedule.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
-                .expect("State Transiton Stage not found (assuming auto-added label)");
+                .expect("State Transition Stage not found (assuming auto-added label)");
             stage.add_exit_system(state, system);
             self
         }
         fn add_enter_system_set<T: StateData>(&mut self, state: T, system_set: SystemSet) -> &mut App {
             let stage = self.schedule.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
-                .expect("State Transiton Stage not found (assuming auto-added label)");
+                .expect("State Transition Stage not found (assuming auto-added label)");
             stage.add_enter_system_set(state, system_set);
             self
         }
         fn add_exit_system_set<T: StateData>(&mut self, state: T, system_set: SystemSet) -> &mut App {
             let stage = self.schedule.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
-                .expect("State Transiton Stage not found (assuming auto-added label)");
+                .expect("State Transition Stage not found (assuming auto-added label)");
             stage.add_exit_system_set(state, system_set);
             self
         }
         fn set_enter_stage<T: StateData>(&mut self, state: T, enter_stage: impl Stage) -> &mut App {
             let stage = self.schedule.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
-                .expect("State Transiton Stage not found (assuming auto-added label)");
+                .expect("State Transition Stage not found (assuming auto-added label)");
             stage.set_enter_stage(state, enter_stage);
             self
         }
         fn set_exit_stage<T: StateData>(&mut self, state: T, exit_stage: impl Stage) -> &mut App {
             let stage = self.schedule.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
-                .expect("State Transiton Stage not found (assuming auto-added label)");
+                .expect("State Transition Stage not found (assuming auto-added label)");
+            stage.set_exit_stage(state, exit_stage);
+            self
+        }
+    }
+}
+
+pub mod schedule {
+    use std::any::TypeId;
+
+    use bevy_ecs::schedule::{StageLabel, Stage, StateData, IntoSystemDescriptor, SystemSet, Schedule};
+
+    use super::StateTransitionStage;
+
+    #[derive(Debug, Clone, PartialEq, Eq, Hash, StageLabel)]
+    pub struct StateTransitionStageLabel(TypeId, String);
+
+    impl StateTransitionStageLabel {
+        pub fn from_type<T: StateData>() -> Self {
+            use std::any::type_name;
+            StateTransitionStageLabel(TypeId::of::<T>(), type_name::<T>().to_owned())
+        }
+    }
+
+    pub trait ScheduleLooplessStateExt {
+        /// Add a `StateTransitionStage` after the specified stage
+        fn add_loopless_state_after_stage<T: StateData>(&mut self, stage: impl StageLabel, init: T) -> &mut Schedule;
+        /// Add a `StateTransitionStage` before the specified stage
+        fn add_loopless_state_before_stage<T: StateData>(&mut self, stage: impl StageLabel, init: T) -> &mut Schedule;
+        /// Add an enter system for the given state
+        ///
+        /// Requires the stage to be labeled with a `StateTransitionStageLabel`
+        /// (as done by the `add_loopless_state*` methods).
+        fn add_enter_system<T: StateData, Params>(&mut self, state: T, system: impl IntoSystemDescriptor<Params>) -> &mut Schedule;
+        /// Add an exit system for the given state
+        ///
+        /// Requires the stage to be labeled with a `StateTransitionStageLabel`
+        /// (as done by the `add_loopless_state*` methods).
+        fn add_exit_system<T: StateData, Params>(&mut self, state: T, system: impl IntoSystemDescriptor<Params>) -> &mut Schedule;
+        /// Add an enter system set for the given state
+        ///
+        /// Requires the stage to be labeled with a `StateTransitionStageLabel`
+        /// (as done by the `add_loopless_state*` methods).
+        fn add_enter_system_set<T: StateData>(&mut self, state: T, system_set: SystemSet) -> &mut Schedule;
+        /// Add an exit system set for the given state
+        ///
+        /// Requires the stage to be labeled with a `StateTransitionStageLabel`
+        /// (as done by the `add_loopless_state*` methods).
+        fn add_exit_system_set<T: StateData>(&mut self, state: T, system_set: SystemSet) -> &mut Schedule;
+        /// Add a custom stage to execute for the given state
+        ///
+        /// Requires the stage to be labeled with a `StateTransitionStageLabel`
+        /// (as done by the `add_loopless_state*` methods).
+        ///
+        /// Cannot be used together with `add_enter_system`.
+        fn set_enter_stage<T: StateData>(&mut self, state: T, system: impl Stage) -> &mut Schedule;
+        /// Add a custom stage to execute for the given state
+        ///
+        /// Requires the stage to be labeled with a `StateTransitionStageLabel`
+        /// (as done by the `add_loopless_state*` methods).
+        ///
+        /// Cannot be used together with `add_enter_system`.
+        fn set_exit_stage<T: StateData>(&mut self, state: T, system: impl Stage) -> &mut Schedule;
+    }
+
+    impl ScheduleLooplessStateExt for Schedule {
+        fn add_loopless_state_after_stage<T: StateData>(&mut self, stage: impl StageLabel, init: T) -> &mut Schedule {
+            self.add_stage_after(
+                stage,
+                StateTransitionStageLabel::from_type::<T>(),
+                StateTransitionStage::new(init)
+            )
+        }
+        fn add_loopless_state_before_stage<T: StateData>(&mut self, stage: impl StageLabel, init: T) -> &mut Schedule {
+            self.add_stage_before(
+                stage,
+                StateTransitionStageLabel::from_type::<T>(),
+                StateTransitionStage::new(init)
+            )
+        }
+        fn add_enter_system<T: StateData, Params>(&mut self, state: T, system: impl IntoSystemDescriptor<Params>) -> &mut Schedule {
+            let stage = self.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
+                .expect("State Transition Stage not found (assuming auto-added label)");
+            stage.add_enter_system(state, system);
+            self
+        }
+        fn add_exit_system<T: StateData, Params>(&mut self, state: T, system: impl IntoSystemDescriptor<Params>) -> &mut Schedule {
+            let stage = self.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
+                .expect("State Transition Stage not found (assuming auto-added label)");
+            stage.add_exit_system(state, system);
+            self
+        }
+        fn add_enter_system_set<T: StateData>(&mut self, state: T, system_set: SystemSet) -> &mut Schedule {
+            let stage = self.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
+                .expect("State Transition Stage not found (assuming auto-added label)");
+            stage.add_enter_system_set(state, system_set);
+            self
+        }
+        fn add_exit_system_set<T: StateData>(&mut self, state: T, system_set: SystemSet) -> &mut Schedule {
+            let stage = self.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
+                .expect("State Transition Stage not found (assuming auto-added label)");
+            stage.add_exit_system_set(state, system_set);
+            self
+        }
+        fn set_enter_stage<T: StateData>(&mut self, state: T, enter_stage: impl Stage) -> &mut Schedule {
+            let stage = self.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
+                .expect("State Transition Stage not found (assuming auto-added label)");
+            stage.set_enter_stage(state, enter_stage);
+            self
+        }
+        fn set_exit_stage<T: StateData>(&mut self, state: T, exit_stage: impl Stage) -> &mut Schedule {
+            let stage = self.get_stage_mut::<StateTransitionStage<T>>(&StateTransitionStageLabel::from_type::<T>())
+                .expect("State Transition Stage not found (assuming auto-added label)");
             stage.set_exit_stage(state, exit_stage);
             self
         }
