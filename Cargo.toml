@@ -29,12 +29,12 @@ app = [
 ]
 
 [dependencies]
-bevy_ecs = { git = "https://github.com/bevyengine/bevy", rev = "e0a8087408c9177927e00a538c8581ada74e1831" }
-bevy_app = { git = "https://github.com/bevyengine/bevy", rev = "e0a8087408c9177927e00a538c8581ada74e1831", optional = true }
-bevy_core = { git = "https://github.com/bevyengine/bevy", rev = "e0a8087408c9177927e00a538c8581ada74e1831", optional = true }
-bevy_utils = { git = "https://github.com/bevyengine/bevy", rev = "e0a8087408c9177927e00a538c8581ada74e1831", optional = true }
-bevy_time = { git = "https://github.com/bevyengine/bevy", rev = "e0a8087408c9177927e00a538c8581ada74e1831", optional = true }
+bevy_ecs = { git = "https://github.com/bevyengine/bevy" }
+bevy_app = { git = "https://github.com/bevyengine/bevy", optional = true }
+bevy_core = { git = "https://github.com/bevyengine/bevy", optional = true }
+bevy_utils = { git = "https://github.com/bevyengine/bevy", optional = true }
+bevy_time = { git = "https://github.com/bevyengine/bevy", optional = true }
 
 [dev-dependencies]
-bevy = { git = "https://github.com/bevyengine/bevy", rev = "e0a8087408c9177927e00a538c8581ada74e1831" }
+bevy = { git = "https://github.com/bevyengine/bevy" }
 rand = "0.8.5"
