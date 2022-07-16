@@ -1,6 +1,6 @@
 use std::time::Duration;
+use bevy_time::Time;
 
-use bevy_core::Time;
 use bevy_ecs::prelude::*;
 
 /// This type will be available as a resource, while a fixed timestep stage
@@ -10,7 +10,7 @@ use bevy_ecs::prelude::*;
 /// reconfigure itself to respect it. Your new timestep duration will be
 /// used starting from the next update cycle.
 pub struct FixedTimestepInfo {
-    step: Duration,
+    pub step: Duration,
     accumulator: Duration,
 }
 

@@ -2,6 +2,11 @@
 
 Notable user-facing changes with each release version will be described in this file.
 
+## [0.6.1]: 2022-06-20
+
+### Changed
+ - The `step` field in `FixedTimestepInfo` is now `pub`. This was a mistake in 0.6.0.
+
 ## [0.6.0]: 2022-06-15
 
 ### Added
@@ -76,6 +81,8 @@ Notable user-facing changes with each release version will be described in this 
 
 Initial Release
 
+[0.6.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.6.1
+[0.6.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.6.0
 [0.5.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.5.1
 [0.5.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.5.0
 [0.4.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.4.0
