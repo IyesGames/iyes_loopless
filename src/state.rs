@@ -228,8 +228,15 @@ pub mod app {
 
     use super::StateTransitionStage;
 
-    #[derive(Debug, Clone, PartialEq, Eq, Hash, StageLabel)]
+    #[derive(Debug, Clone)]
     pub struct StateTransitionStageLabel(TypeId, String);
+
+    impl StageLabel for StateTransitionStageLabel {
+        fn as_str(&self) -> &'static str {
+            let s = format!("{:?}{}", self.0, self.1);
+            Box::leak(s.into_boxed_str())
+        }
+    }
 
     impl StateTransitionStageLabel {
         pub fn from_type<T: StateData>() -> Self {
@@ -347,8 +354,15 @@ pub mod schedule {
 
     use super::StateTransitionStage;
 
-    #[derive(Debug, Clone, PartialEq, Eq, Hash, StageLabel)]
+    #[derive(Debug, Clone)]
     pub struct StateTransitionStageLabel(TypeId, String);
+
+    impl StageLabel for StateTransitionStageLabel {
+        fn as_str(&self) -> &'static str {
+            let s = format!("{:?}{}", self.0, self.1);
+            Box::leak(s.into_boxed_str())
+        }
+    }
 
     impl StateTransitionStageLabel {
         pub fn from_type<T: StateData>() -> Self {
