@@ -229,6 +229,7 @@ pub mod app {
     use super::StateTransitionStage;
 
     #[derive(Debug, Clone, PartialEq, Eq, Hash, StageLabel)]
+    #[stage_label(ignore_fields)]
     pub struct StateTransitionStageLabel(TypeId, String);
 
     impl StateTransitionStageLabel {
