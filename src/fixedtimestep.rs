@@ -1,6 +1,6 @@
 use std::time::Duration;
+use bevy_time::Time;
 
-use bevy_core::Time;
 use bevy_ecs::prelude::*;
 
 /// This type will be available as a resource, while a fixed timestep stage
