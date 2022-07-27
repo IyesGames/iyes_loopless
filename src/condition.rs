@@ -662,12 +662,12 @@ impl ConditionSet {
     }
 
     pub fn before<Marker>(mut self, label: impl AsSystemLabel<Marker> + 'static) -> Self {
-        self.labellers.push(Box::new(move |set: SystemSet| set.before(label.as_system_label())));
+        self.labellers.push(Box::new(move |set: SystemSet| set.before(label)));
         self
     }
 
     pub fn after<Marker>(mut self, label: impl AsSystemLabel<Marker> + 'static) -> Self {
-        self.labellers.push(Box::new(move |set: SystemSet| set.after(label.as_system_label())));
+        self.labellers.push(Box::new(move |set: SystemSet| set.after(label)));
         self
     }
 }
