@@ -15,8 +15,7 @@ exclude = ["assets"]
 [features]
 default = [ "fixedtimestep", "states", "bevy-compat", "app" ]
 fixedtimestep = [
-    "bevy_core",
-    "bevy_time"
+    "bevy_time",
 ]
 states = [
     "bevy_utils",
@@ -31,7 +30,6 @@ app = [
 [dependencies]
 bevy_ecs = { git = "https://github.com/bevyengine/bevy" }
 bevy_app = { git = "https://github.com/bevyengine/bevy", optional = true }
-bevy_core = { git = "https://github.com/bevyengine/bevy", optional = true }
 bevy_utils = { git = "https://github.com/bevyengine/bevy", optional = true }
 bevy_time = { git = "https://github.com/bevyengine/bevy", optional = true }
 
