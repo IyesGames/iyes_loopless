@@ -1,6 +1,8 @@
-use bevy_ecs::schedule::{Stage, StateData, IntoSystemDescriptor, SystemSet, SystemStage};
+use bevy_ecs::schedule::{Stage, StateData, StageLabel, IntoSystemDescriptor, SystemSet, SystemStage};
 use bevy_ecs::world::World;
 use bevy_utils::HashMap;
+
+use std::any::TypeId;
 
 /// This will be available as a resource, indicating the current state
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -219,31 +221,29 @@ impl<T: StateData> Stage for StateTransitionStage<T> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct StateTransitionStageLabel(TypeId, String);
+
+impl StageLabel for StateTransitionStageLabel {
+    fn as_str(&self) -> &'static str {
+        let s = format!("{:?}{}", self.0, self.1);
+        Box::leak(s.into_boxed_str())
+    }
+}
+
+impl StateTransitionStageLabel {
+    pub fn from_type<T: StateData>() -> Self {
+        use std::any::type_name;
+        StateTransitionStageLabel(TypeId::of::<T>(), type_name::<T>().to_owned())
+    }
+}
+
 #[cfg(feature = "app")]
 pub mod app {
-    use std::any::TypeId;
-
     use bevy_ecs::schedule::{StageLabel, Stage, StateData, IntoSystemDescriptor, SystemSet};
     use bevy_app::{App, CoreStage};
 
-    use super::StateTransitionStage;
-
-    #[derive(Debug, Clone)]
-    pub struct StateTransitionStageLabel(TypeId, String);
-
-    impl StageLabel for StateTransitionStageLabel {
-        fn as_str(&self) -> &'static str {
-            let s = format!("{:?}{}", self.0, self.1);
-            Box::leak(s.into_boxed_str())
-        }
-    }
-
-    impl StateTransitionStageLabel {
-        pub fn from_type<T: StateData>() -> Self {
-            use std::any::type_name;
-            StateTransitionStageLabel(TypeId::of::<T>(), type_name::<T>().to_owned())
-        }
-    }
+    use super::{StateTransitionStage, StateTransitionStageLabel};
 
     pub trait AppLooplessStateExt {
         /// Add a `StateTransitionStage` in the default position
@@ -348,28 +348,9 @@ pub mod app {
 }
 
 pub mod schedule {
-    use std::any::TypeId;
-
     use bevy_ecs::schedule::{StageLabel, Stage, StateData, IntoSystemDescriptor, SystemSet, Schedule};
 
-    use super::StateTransitionStage;
-
-    #[derive(Debug, Clone)]
-    pub struct StateTransitionStageLabel(TypeId, String);
-
-    impl StageLabel for StateTransitionStageLabel {
-        fn as_str(&self) -> &'static str {
-            let s = format!("{:?}{}", self.0, self.1);
-            Box::leak(s.into_boxed_str())
-        }
-    }
-
-    impl StateTransitionStageLabel {
-        pub fn from_type<T: StateData>() -> Self {
-            use std::any::type_name;
-            StateTransitionStageLabel(TypeId::of::<T>(), type_name::<T>().to_owned())
-        }
-    }
+    use super::{StateTransitionStage, StateTransitionStageLabel};
 
     pub trait ScheduleLooplessStateExt {
         /// Add a `StateTransitionStage` after the specified stage
