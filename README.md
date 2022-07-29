@@ -40,7 +40,7 @@ The "run conditions" functionality is always enabled, and depends only on
 `bevy_ecs`.
 
 The "fixed timestep" functionality is optional (`"fixedtimestep"` cargo
-feature, enabled by default) and adds a dependency on `bevy_core`
+feature, enabled by default) and adds a dependency on `bevy_time`
 (needed for `Res<Time>`).
 
 The "states" functionality is optional (`"states"` cargo feature, enabled
