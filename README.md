@@ -12,6 +12,7 @@ Version Compatibility Table:
 |Bevy Version|Crate Version      |
 |------------|-------------------|
 |`main`      |`bevy_main`        |
+|`0.8`       |`0.7`              |
 |`0.7`       |`main`             |
 |`0.7`       |`0.4`, `0.5`, `0.6`|
 |`0.6`       |`0.1`, `0.2`, `0.3`|
