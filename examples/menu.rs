@@ -51,7 +51,6 @@ fn main() {
         .add_exit_system(GameState::MainMenu, despawn_with::<MainMenu>)
         // game cleanup (state exit) systems
         .add_exit_system(GameState::InGame, despawn_with::<MySprite>)
-        .add_exit_system(GameState::InGame, despawn_with::<GameCamera>)
         // menu stuff
         .add_system_set(
             ConditionSet::new()
@@ -74,7 +73,7 @@ fn main() {
         )
         // our other various systems:
         .add_system(debug_current_state)
-        // setup our UI camera globally at startup and keep it alive at all times
+        // setup our camera globally (for UI) at startup and keep it alive at all times
         .add_startup_system(setup_camera)
         .run();
 }
@@ -249,7 +248,7 @@ fn setup_menu(mut commands: Commands, ass: Res<AssetServer>) {
         })
         .with_children(|btn| {
             btn.spawn_bundle(TextBundle {
-                text: Text::with_section("Enter Game", butt_textstyle.clone(), Default::default()),
+                text: Text::from_section("Enter Game", butt_textstyle.clone()),
                 ..Default::default()
             });
         })
@@ -263,7 +262,7 @@ fn setup_menu(mut commands: Commands, ass: Res<AssetServer>) {
         })
         .with_children(|btn| {
             btn.spawn_bundle(TextBundle {
-                text: Text::with_section("Exit Game", butt_textstyle.clone(), Default::default()),
+                text: Text::from_section("Exit Game", butt_textstyle.clone()),
                 ..Default::default()
             });
         })

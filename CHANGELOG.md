@@ -2,6 +2,15 @@
 
 Notable user-facing changes with each release version will be described in this file.
 
+## [0.7.0]: 2022-07-31
+
+### Added
+ - API helper extension methods for `Schedule`, analogous to those for `App`. (thanks @NiklasEi)
+
+### Changed
+ - Bevy 0.8 support
+ - `FixedTimestepInfo.accumulator` is now `pub`; mutations also affect the internal accumulator
+
 ## [0.6.1]: 2022-06-20
 
 ### Changed
@@ -81,6 +90,7 @@ Notable user-facing changes with each release version will be described in this 
 
 Initial Release
 
+[0.7.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.7.0
 [0.6.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.6.1
 [0.6.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.6.0
 [0.5.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.5.1
