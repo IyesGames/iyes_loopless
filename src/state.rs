@@ -12,6 +12,22 @@ pub struct CurrentState<T>(pub T);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NextState<T>(pub T);
 
+#[cfg(feature = "bevy-inspector-egui")]
+impl<T: bevy_inspector_egui::Inspectable> bevy_inspector_egui::Inspectable for CurrentState<T> {
+    type Attributes = T::Attributes;
+    fn ui(&mut self, ui: &mut bevy_inspector_egui::egui::Ui, options: Self::Attributes, cx: &mut bevy_inspector_egui::Context) -> bool {
+        self.0.ui(ui, options, cx)
+    }
+}
+#[cfg(feature = "bevy-inspector-egui")]
+impl<T: bevy_inspector_egui::Inspectable> bevy_inspector_egui::Inspectable for NextState<T> {
+    type Attributes = T::Attributes;
+    fn ui(&mut self, ui: &mut bevy_inspector_egui::egui::Ui, options: Self::Attributes, cx: &mut bevy_inspector_egui::Context) -> bool {
+        self.0.ui(ui, options, cx)
+    }
+}
+
+
 /// This stage serves as the "driver" for states of a given type
 ///
 /// It will perform state transitions, based on the values of [`NextState`]
