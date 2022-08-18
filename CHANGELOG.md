@@ -2,6 +2,15 @@
 
 Notable user-facing changes with each release version will be described in this file.
 
+## [0.7.1]: 2022-08-18
+
+### Added
+ - Optional `bevy-inspector-egui` support (thanks @jakobhellermann)
+
+### Changed
+ - Using bare system function names with `before`/`after` is now a compile error instead of runtime warning.
+   (this was always broken and unsupported)
+
 ## [0.7.0]: 2022-07-31
 
 ### Added
@@ -90,6 +99,7 @@ Notable user-facing changes with each release version will be described in this 
 
 Initial Release
 
+[0.7.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.7.1
 [0.7.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.7.0
 [0.6.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.6.1
 [0.6.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.6.0

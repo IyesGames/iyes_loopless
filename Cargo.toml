@@ -1,6 +1,6 @@
 [package]
 name = "iyes_loopless"
-version = "0.7.0"
+version = "0.7.1"
 description = "Composable alternatives to Bevy's States/FixedTimestep/RunCriteria"
 edition = "2021"
 license = "MIT OR Apache-2.0"
