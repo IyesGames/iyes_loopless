@@ -33,7 +33,7 @@ fn main() {
             // only in-game!
             .run_in_state(GameState::InGame)
             // only while the spacebar is pressed
-            .run_if(spacebar_pressed),
+            .run_if(spacebar_pressed)
     );
 
     App::new()

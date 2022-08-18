@@ -28,7 +28,7 @@ use bevy_ecs::{
     prelude::Local,
     query::Access,
     schedule::{SystemSet, IntoSystemDescriptor, SystemLabel, ParallelSystemDescriptorCoercion, ParallelSystemDescriptor},
-    system::{AsSystemLabel, In, IntoChainSystem, IntoSystem, Res, Resource, System, BoxedSystem, ExclusiveSystem, IntoExclusiveSystem},
+    system::{In, IntoChainSystem, IntoSystem, Res, Resource, System, BoxedSystem, ExclusiveSystem, IntoExclusiveSystem},
     world::World,
 };
 
@@ -75,7 +75,7 @@ impl ConditionalSystemDescriptor {
             }
         }))
     }
-    pub fn add_before<Marker>(&mut self, label: impl AsSystemLabel<Marker> + 'static) {
+    pub fn add_before(&mut self, label: impl SystemLabel) {
         self.label_shits.push(Box::new(move |wa| {
             match wa {
                 BevyDescriptorWorkaround::Descriptor(x) => {
@@ -87,7 +87,7 @@ impl ConditionalSystemDescriptor {
             }
         }))
     }
-    pub fn add_after<Marker>(&mut self, label: impl AsSystemLabel<Marker> + 'static) {
+    pub fn add_after(&mut self, label: impl SystemLabel) {
         self.label_shits.push(Box::new(move |wa| {
             match wa {
                 BevyDescriptorWorkaround::Descriptor(x) => {
@@ -105,12 +105,12 @@ impl ConditionalSystemDescriptor {
         self
     }
 
-    pub fn before<Marker>(mut self, label: impl AsSystemLabel<Marker> + 'static) -> Self {
+    pub fn before(mut self, label: impl SystemLabel) -> Self {
         self.add_before(label);
         self
     }
 
-    pub fn after<Marker>(mut self, label: impl AsSystemLabel<Marker> + 'static) -> Self {
+    pub fn after(mut self, label: impl SystemLabel) -> Self {
         self.add_after(label);
         self
     }
@@ -661,12 +661,12 @@ impl ConditionSet {
         self
     }
 
-    pub fn before<Marker>(mut self, label: impl AsSystemLabel<Marker> + 'static) -> Self {
+    pub fn before(mut self, label: impl SystemLabel) -> Self {
         self.labellers.push(Box::new(move |set: SystemSet| set.before(label)));
         self
     }
 
-    pub fn after<Marker>(mut self, label: impl AsSystemLabel<Marker> + 'static) -> Self {
+    pub fn after(mut self, label: impl SystemLabel) -> Self {
         self.labellers.push(Box::new(move |set: SystemSet| set.after(label)));
         self
     }
