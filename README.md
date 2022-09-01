@@ -109,7 +109,7 @@ fn notify_server(/* ... */) {
 ```
 
 It is highly recommended that all your condition systems only access data
-immutably. Avoid mutable access or locals in condition systems, unless are
+immutably. Avoid mutable access or locals in condition systems, unless you are
 really sure about what you are doing. If you add the same condition to many
 systems, it *will run with each one*.
 
