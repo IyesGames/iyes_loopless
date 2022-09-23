@@ -1,7 +1,23 @@
 use std::time::Duration;
 use bevy_time::Time;
+use bevy_utils::HashMap;
 
 use bevy_ecs::prelude::*;
+
+#[derive(Default)]
+pub struct FixedTimesteps {
+    info: HashMap<String, FixedTimestepInfo>,
+    current: Option<String>,
+}
+
+impl FixedTimesteps {
+    pub fn get(&self, label: &str) -> Option<&FixedTimestepInfo> {
+        self.info.get(label)
+    }
+    pub fn get_current(&self) -> Option<&FixedTimestepInfo> {
+        self.current.as_ref().and_then(|label| self.get(label))
+    }
+}
 
 /// This type will be available as a resource, while a fixed timestep stage
 /// runs, to provide info about the current status of the fixed timestep.
@@ -49,6 +65,7 @@ impl FixedTimestepInfo {
 pub struct FixedTimestepStage {
     step: Duration,
     accumulator: Duration,
+    label: String,
     stages: Vec<Box<dyn Stage>>,
     rate_lock: (u32, f32),
     lock_accum: u32,
@@ -56,15 +73,16 @@ pub struct FixedTimestepStage {
 
 impl FixedTimestepStage {
     /// Helper to create a `FixedTimestepStage` with a single child stage
-    pub fn from_stage<S: Stage>(timestep: Duration, stage: S) -> Self {
-        Self::new(timestep).with_stage(stage)
+    pub fn from_stage<S: Stage>(timestep: Duration, label: String, stage: S) -> Self {
+        Self::new(timestep, label).with_stage(stage)
     }
 
     /// Create a new empty `FixedTimestepStage` with no child stages
-    pub fn new(timestep: Duration) -> Self {
+    pub fn new(timestep: Duration, label: String) -> Self {
         Self {
             step: timestep,
             accumulator: Duration::default(),
+            label,
             stages: Vec::new(),
             rate_lock: (u32::MAX, 0.0),
             lock_accum: 0,
@@ -137,22 +155,49 @@ impl Stage for FixedTimestepStage {
 
         let mut n_steps = 0;
 
-        while self.accumulator >= self.step {
-            self.accumulator -= self.step;
-            for stage in self.stages.iter_mut() {
-                world.insert_resource(FixedTimestepInfo {
+        // ensure the FixedTimesteps resource exists and contains the latest data
+        if let Some(mut timesteps) = world.get_resource_mut::<FixedTimesteps>() {
+            timesteps.current = Some(self.label.clone());
+            if let Some(mut info) = timesteps.info.get_mut(&self.label) {
+                info.step = self.step;
+                info.accumulator = self.accumulator;
+            } else {
+                timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
                     step: self.step,
                     accumulator: self.accumulator,
                 });
+            }
+        } else {
+            let mut timesteps = FixedTimesteps::default();
+            timesteps.current = Some(self.label.clone());
+            timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
+                step: self.step,
+                accumulator: self.accumulator,
+            });
+            world.insert_resource(timesteps);
+        }
+
+        while self.accumulator >= self.step {
+            self.accumulator -= self.step;
+            for stage in self.stages.iter_mut() {
+                // run user systems
                 stage.run(world);
-                if let Some(info) = world.remove_resource::<FixedTimestepInfo>() {
-                    // update our actual step duration, in case the user has
-                    // modified it in the info resource
-                    self.step = info.step;
-                    self.accumulator = info.accumulator;
+
+                // if the user modified fixed timestep info, we need to copy it back
+                if let Some(timesteps) = world.get_resource::<FixedTimesteps>() {
+                    if let Some(info) = timesteps.info.get(&self.label) {
+                        // update our actual step duration, in case the user has
+                        // modified it in the info resource
+                        self.step = info.step;
+                        self.accumulator = info.accumulator;
+                    }
                 }
             }
             n_steps += 1;
+        }
+
+        if let Some(mut timesteps) = world.get_resource_mut::<FixedTimesteps>() {
+            timesteps.current = None;
         }
 
         if n_steps == 1 {
