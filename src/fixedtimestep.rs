@@ -28,6 +28,7 @@ impl FixedTimesteps {
 pub struct FixedTimestepInfo {
     pub step: Duration,
     pub accumulator: Duration,
+    pub paused: bool,
 }
 
 impl FixedTimestepInfo {
@@ -48,6 +49,14 @@ impl FixedTimestepInfo {
     pub fn overstep(&self) -> f64 {
         self.accumulator.as_secs_f64() / self.step.as_secs_f64()
     }
+
+    pub fn pause(&mut self) {
+        self.paused = true;
+    }
+
+    pub fn unpause(&mut self) {
+        self.paused = false;
+    }
 }
 
 /// A Stage that runs a number of child stages with a fixed timestep
@@ -65,6 +74,7 @@ impl FixedTimestepInfo {
 pub struct FixedTimestepStage {
     step: Duration,
     accumulator: Duration,
+    paused: bool,
     label: String,
     stages: Vec<Box<dyn Stage>>,
     rate_lock: (u32, f32),
@@ -82,11 +92,18 @@ impl FixedTimestepStage {
         Self {
             step: timestep,
             accumulator: Duration::default(),
+            paused: false,
             label,
             stages: Vec::new(),
             rate_lock: (u32::MAX, 0.0),
             lock_accum: 0,
         }
+    }
+
+    /// Builder method for starting in a paused state
+    pub fn paused(mut self) -> Self {
+        self.paused = true;
+        self
     }
 
     /// Add a child stage
@@ -135,6 +152,16 @@ impl FixedTimestepStage {
 
 impl Stage for FixedTimestepStage {
     fn run(&mut self, world: &mut World) {
+        if let Some(timesteps) = world.get_resource::<FixedTimesteps>() {
+            if let Some(info) = timesteps.info.get(&self.label) {
+                self.paused = info.paused;
+            }
+        }
+
+        if self.paused {
+            return;
+        }
+
         self.accumulator += {
             let time = world.get_resource::<Time>();
             if let Some(time) = time {
@@ -161,10 +188,12 @@ impl Stage for FixedTimestepStage {
             if let Some(mut info) = timesteps.info.get_mut(&self.label) {
                 info.step = self.step;
                 info.accumulator = self.accumulator;
+                info.paused = self.paused;
             } else {
                 timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
                     step: self.step,
                     accumulator: self.accumulator,
+                    paused: self.paused,
                 });
             }
         } else {
@@ -173,6 +202,7 @@ impl Stage for FixedTimestepStage {
             timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
                 step: self.step,
                 accumulator: self.accumulator,
+                paused: self.paused,
             });
             world.insert_resource(timesteps);
         }
@@ -190,6 +220,7 @@ impl Stage for FixedTimestepStage {
                         // modified it in the info resource
                         self.step = info.step;
                         self.accumulator = info.accumulator;
+                        self.paused = info.paused;
                     }
                 }
             }
