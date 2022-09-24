@@ -182,33 +182,34 @@ impl Stage for FixedTimestepStage {
 
         let mut n_steps = 0;
 
-        // ensure the FixedTimesteps resource exists and contains the latest data
-        if let Some(mut timesteps) = world.get_resource_mut::<FixedTimesteps>() {
-            timesteps.current = Some(self.label.clone());
-            if let Some(mut info) = timesteps.info.get_mut(&self.label) {
-                info.step = self.step;
-                info.accumulator = self.accumulator;
-                info.paused = self.paused;
+        while self.accumulator >= self.step {
+            self.accumulator -= self.step;
+
+            // ensure the FixedTimesteps resource exists and contains the latest data
+            if let Some(mut timesteps) = world.get_resource_mut::<FixedTimesteps>() {
+                timesteps.current = Some(self.label.clone());
+                if let Some(mut info) = timesteps.info.get_mut(&self.label) {
+                    info.step = self.step;
+                    info.accumulator = self.accumulator;
+                    info.paused = self.paused;
+                } else {
+                    timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
+                        step: self.step,
+                        accumulator: self.accumulator,
+                        paused: self.paused,
+                    });
+                }
             } else {
+                let mut timesteps = FixedTimesteps::default();
+                timesteps.current = Some(self.label.clone());
                 timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
                     step: self.step,
                     accumulator: self.accumulator,
                     paused: self.paused,
                 });
+                world.insert_resource(timesteps);
             }
-        } else {
-            let mut timesteps = FixedTimesteps::default();
-            timesteps.current = Some(self.label.clone());
-            timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
-                step: self.step,
-                accumulator: self.accumulator,
-                paused: self.paused,
-            });
-            world.insert_resource(timesteps);
-        }
 
-        while self.accumulator >= self.step {
-            self.accumulator -= self.step;
             for stage in self.stages.iter_mut() {
                 // run user systems
                 stage.run(world);
