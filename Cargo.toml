@@ -16,6 +16,7 @@ exclude = ["assets"]
 default = [ "fixedtimestep", "states", "bevy-compat", "app" ]
 fixedtimestep = [
     "bevy_time",
+    "bevy_utils",
 ]
 states = [
     "bevy_utils",
