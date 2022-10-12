@@ -11,16 +11,23 @@ pub struct FixedTimesteps {
 }
 
 impl FixedTimesteps {
+    /// Returns a reference to the timestep info for a label.
     pub fn get(&self, label: &str) -> Option<&FixedTimestepInfo> {
         self.info.get(label)
     }
+
+    /// Returns a reference to the timestep info for the currently running stage.
+    ///
+    /// Returns [`Some`] only if called inside a fixed timestep stage.
     pub fn get_current(&self) -> Option<&FixedTimestepInfo> {
         self.current.as_ref().and_then(|label| self.get(label))
     }
 }
 
-/// This type will be available as a resource, while a fixed timestep stage
-/// runs, to provide info about the current status of the fixed timestep.
+/// Provides info about the current status of the fixed timestep
+///
+/// This type will be available for each fixed timestep stage inside [`FixedTimesteps`] resource
+/// starting from first timestep run.
 ///
 /// If you modify the step value, the fixed timestep driver stage will
 /// reconfigure itself to respect it. Your new timestep duration will be
