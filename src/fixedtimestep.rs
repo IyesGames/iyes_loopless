@@ -1,5 +1,5 @@
-use std::time::Duration;
 use bevy_time::Time;
+use bevy_utils::Duration;
 use bevy_utils::HashMap;
 
 use bevy_ecs::prelude::*;
