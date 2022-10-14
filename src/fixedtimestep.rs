@@ -251,3 +251,94 @@ impl Stage for FixedTimestepStage {
         }
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct FixedTimestepStageLabel(pub String);
+
+impl StageLabel for FixedTimestepStageLabel {
+    fn as_str(&self) -> &'static str {
+        Box::leak(self.0.clone().into_boxed_str())
+    }
+}
+
+#[cfg(feature = "app")]
+pub mod app {
+    use bevy_utils::Duration;
+    use bevy_ecs::prelude::*;
+    use bevy_ecs::schedule::IntoSystemDescriptor;
+    use bevy_app::{App, CoreStage};
+
+    use super::{FixedTimestepStage, FixedTimestepStageLabel};
+
+    pub trait AppLooplessFixedTimestepExt {
+        fn add_fixed_timestep(&mut self, timestep: Duration, label: String) -> &mut App;
+        fn add_fixed_timestep_before_stage(&mut self, stage: impl StageLabel, timestep: Duration, label: String) -> &mut App;
+        fn add_fixed_timestep_after_stage(&mut self, stage: impl StageLabel, timestep: Duration, label: String) -> &mut App;
+        fn add_fixed_timestep_child_stage(&mut self, timestep_label: &str) -> &mut App;
+        fn add_fixed_timestep_custom_child_stage(&mut self, timestep_label: &str, stage: impl Stage) -> &mut App;
+        fn add_fixed_timestep_system<Params>(&mut self, timestep_label: &str, substage_i: usize, system: impl IntoSystemDescriptor<Params>) -> &mut App;
+        fn add_fixed_timestep_system_set(&mut self, timestep_label: &str, substage_i: usize, system_set: SystemSet) -> &mut App;
+    }
+
+    impl AppLooplessFixedTimestepExt for App {
+        fn add_fixed_timestep(&mut self, timestep: Duration, label: String) -> &mut App {
+            self.add_fixed_timestep_before_stage(CoreStage::Update, timestep, label)
+        }
+
+        fn add_fixed_timestep_before_stage(&mut self, stage: impl StageLabel, timestep: Duration, label: String) -> &mut App {
+            self.add_stage_before(
+                stage,
+                FixedTimestepStageLabel(label.clone()),
+                FixedTimestepStage::from_stage(timestep, label, SystemStage::parallel())
+            )
+        }
+
+        fn add_fixed_timestep_after_stage(&mut self, stage: impl StageLabel, timestep: Duration, label: String) -> &mut App {
+            self.add_stage_after(
+                stage,
+                FixedTimestepStageLabel(label.clone()),
+                FixedTimestepStage::from_stage(timestep, label, SystemStage::parallel())
+            )
+        }
+
+        fn add_fixed_timestep_child_stage(&mut self, timestep_label: &str) -> &mut App {
+            let stage = self.schedule.get_stage_mut::<FixedTimestepStage>(
+                &FixedTimestepStageLabel(timestep_label.to_owned())
+            ).expect("Fixed Timestep Stage not found");
+            stage.add_stage(SystemStage::parallel());
+            self
+        }
+
+        fn add_fixed_timestep_custom_child_stage(&mut self, timestep_label: &str, custom_stage: impl Stage) -> &mut App {
+            let stage = self.schedule.get_stage_mut::<FixedTimestepStage>(
+                &FixedTimestepStageLabel(timestep_label.to_owned())
+            ).expect("Fixed Timestep Stage not found");
+            stage.add_stage(custom_stage);
+            self
+        }
+
+        fn add_fixed_timestep_system<Params>(&mut self, timestep_label: &str, substage_i: usize, system: impl IntoSystemDescriptor<Params>) -> &mut App {
+            let stage = self.schedule.get_stage_mut::<FixedTimestepStage>(
+                &FixedTimestepStageLabel(timestep_label.to_owned())
+            ).expect("Fixed Timestep Stage not found");
+            let substage = stage.stages.get_mut(substage_i)
+                .expect("Fixed Timestep sub-stage not found")
+                .downcast_mut::<SystemStage>()
+                .expect("Fixed Timestep sub-stage is not a SystemStage");
+            substage.add_system(system);
+            self
+        }
+
+        fn add_fixed_timestep_system_set(&mut self, timestep_label: &str, substage_i: usize, system_set: SystemSet) -> &mut App {
+            let stage = self.schedule.get_stage_mut::<FixedTimestepStage>(
+                &FixedTimestepStageLabel(timestep_label.to_owned())
+            ).expect("Fixed Timestep Stage not found");
+            let substage = stage.stages.get_mut(substage_i)
+                .expect("Fixed Timestep sub-stage not found")
+                .downcast_mut::<SystemStage>()
+                .expect("Fixed Timestep sub-stage is not a SystemStage");
+            substage.add_system_set(system_set);
+            self
+        }
+    }
+}
