@@ -296,14 +296,14 @@ pub mod app {
         /// (as done by the `add_loopless_state*` methods).
         ///
         /// Cannot be used together with `add_enter_system`.
-        fn set_enter_stage<T: StateData>(&mut self, state: T, system: impl Stage) -> &mut App;
+        fn set_enter_stage<T: StateData>(&mut self, state: T, stage: impl Stage) -> &mut App;
         /// Add a custom stage to execute for the given state
         ///
         /// Requires the stage to be labeled with a `StateTransitionStageLabel`
         /// (as done by the `add_loopless_state*` methods).
         ///
         /// Cannot be used together with `add_enter_system`.
-        fn set_exit_stage<T: StateData>(&mut self, state: T, system: impl Stage) -> &mut App;
+        fn set_exit_stage<T: StateData>(&mut self, state: T, stage: impl Stage) -> &mut App;
     }
 
     impl AppLooplessStateExt for App {
@@ -399,14 +399,14 @@ pub mod schedule {
         /// (as done by the `add_loopless_state*` methods).
         ///
         /// Cannot be used together with `add_enter_system`.
-        fn set_enter_stage<T: StateData>(&mut self, state: T, system: impl Stage) -> &mut Schedule;
+        fn set_enter_stage<T: StateData>(&mut self, state: T, stage: impl Stage) -> &mut Schedule;
         /// Add a custom stage to execute for the given state
         ///
         /// Requires the stage to be labeled with a `StateTransitionStageLabel`
         /// (as done by the `add_loopless_state*` methods).
         ///
         /// Cannot be used together with `add_enter_system`.
-        fn set_exit_stage<T: StateData>(&mut self, state: T, system: impl Stage) -> &mut Schedule;
+        fn set_exit_stage<T: StateData>(&mut self, state: T, stage: impl Stage) -> &mut Schedule;
     }
 
     impl ScheduleLooplessStateExt for Schedule {
