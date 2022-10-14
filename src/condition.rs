@@ -24,7 +24,7 @@ use std::borrow::Cow;
 use bevy_ecs::{
     archetype::ArchetypeComponentId,
     component::ComponentId,
-    event::Events,
+    event::EventReader,
     prelude::Local,
     query::Access,
     schedule::{SystemSet, IntoSystemDescriptor, SystemLabel, ParallelSystemDescriptorCoercion, ParallelSystemDescriptor},
@@ -327,7 +327,7 @@ pub trait ConditionHelpers: Sized {
 
     /// Helper: add a condition to run if there are events of the given type
     fn run_on_event<T: Send + Sync + 'static>(self) -> Self {
-        self.run_if(move |ev: Res<Events<T>>| !ev.is_empty())
+        self.run_if(move |mut evr: EventReader<T>| evr.iter().count() > 0)
     }
 
     /// Helper: add a condition to run if a resource of a given type exists
@@ -769,7 +769,7 @@ impl ConditionSet {
 
     /// Helper: add a condition to run if there are events of the given type
     pub fn run_on_event<T: Send + Sync + 'static>(self) -> Self {
-        self.run_if(move |ev: Res<Events<T>>| !ev.is_empty())
+        self.run_if(move |mut evr: EventReader<T>| evr.iter().count() > 0)
     }
 
     /// Helper: add a condition to run if a resource of a given type exists
