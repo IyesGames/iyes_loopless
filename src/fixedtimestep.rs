@@ -171,6 +171,33 @@ impl FixedTimestepStage {
         self.set_rate_lock(n_frames, exit_deviation);
         self
     }
+
+    /// ensure the FixedTimesteps resource exists and contains the latest data
+    fn store_fixedtimestepinfo(&self, world: &mut World) {
+        if let Some(mut timesteps) = world.get_resource_mut::<FixedTimesteps>() {
+            timesteps.current = Some(self.label.clone());
+            if let Some(mut info) = timesteps.info.get_mut(&self.label) {
+                info.step = self.step;
+                info.accumulator = self.accumulator;
+                info.paused = self.paused;
+            } else {
+                timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
+                    step: self.step,
+                    accumulator: self.accumulator,
+                    paused: self.paused,
+                });
+            }
+        } else {
+            let mut timesteps = FixedTimesteps::default();
+            timesteps.current = Some(self.label.clone());
+            timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
+                step: self.step,
+                accumulator: self.accumulator,
+                paused: self.paused,
+            });
+            world.insert_resource(timesteps);
+        }
+    }
 }
 
 impl Stage for FixedTimestepStage {
@@ -210,30 +237,7 @@ impl Stage for FixedTimestepStage {
         while self.accumulator >= self.step {
             self.accumulator -= self.step;
 
-            // ensure the FixedTimesteps resource exists and contains the latest data
-            if let Some(mut timesteps) = world.get_resource_mut::<FixedTimesteps>() {
-                timesteps.current = Some(self.label.clone());
-                if let Some(mut info) = timesteps.info.get_mut(&self.label) {
-                    info.step = self.step;
-                    info.accumulator = self.accumulator;
-                    info.paused = self.paused;
-                } else {
-                    timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
-                        step: self.step,
-                        accumulator: self.accumulator,
-                        paused: self.paused,
-                    });
-                }
-            } else {
-                let mut timesteps = FixedTimesteps::default();
-                timesteps.current = Some(self.label.clone());
-                timesteps.info.insert(self.label.clone(), FixedTimestepInfo {
-                    step: self.step,
-                    accumulator: self.accumulator,
-                    paused: self.paused,
-                });
-                world.insert_resource(timesteps);
-            }
+            self.store_fixedtimestepinfo(world);
 
             for stage in self.stages.iter_mut() {
                 // run user systems
@@ -286,7 +290,7 @@ pub mod app {
     use bevy_ecs::schedule::IntoSystemDescriptor;
     use bevy_app::{App, CoreStage};
 
-    use super::{FixedTimestepStage, FixedTimestepStageLabel};
+    use super::{FixedTimestepStage, FixedTimestepStageLabel, FixedTimesteps};
 
     pub trait AppLooplessFixedTimestepExt {
         fn add_fixed_timestep(&mut self, timestep: Duration, label: String) -> &mut App;
@@ -304,18 +308,22 @@ pub mod app {
         }
 
         fn add_fixed_timestep_before_stage(&mut self, stage: impl StageLabel, timestep: Duration, label: String) -> &mut App {
+            let ftstage = FixedTimestepStage::from_stage(timestep, label.clone(), SystemStage::parallel());
+            ftstage.store_fixedtimestepinfo(&mut self.world);
             self.add_stage_before(
                 stage,
-                FixedTimestepStageLabel(label.clone()),
-                FixedTimestepStage::from_stage(timestep, label, SystemStage::parallel())
+                FixedTimestepStageLabel(label),
+                ftstage
             )
         }
 
         fn add_fixed_timestep_after_stage(&mut self, stage: impl StageLabel, timestep: Duration, label: String) -> &mut App {
+            let ftstage = FixedTimestepStage::from_stage(timestep, label.clone(), SystemStage::parallel());
+            ftstage.store_fixedtimestepinfo(&mut self.world);
             self.add_stage_after(
                 stage,
-                FixedTimestepStageLabel(label.clone()),
-                FixedTimestepStage::from_stage(timestep, label, SystemStage::parallel())
+                FixedTimestepStageLabel(label),
+                ftstage
             )
         }
 
