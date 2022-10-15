@@ -177,7 +177,9 @@ impl Stage for FixedTimestepStage {
     fn run(&mut self, world: &mut World) {
         if let Some(timesteps) = world.get_resource::<FixedTimesteps>() {
             if let Some(info) = timesteps.info.get(&self.label) {
+                self.step = info.step;
                 self.paused = info.paused;
+                // do not sync accumulator
             }
         }
 
