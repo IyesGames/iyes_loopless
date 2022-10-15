@@ -26,24 +26,15 @@ enum GameState {
 }
 
 fn main() {
-    // stage for anything we want to do on a fixed timestep
-    let mut fixedupdate = SystemStage::parallel();
-    fixedupdate.add_system(
-        spawn_sprite
-            // only in-game!
-            .run_in_state(GameState::InGame)
-            // only while the spacebar is pressed
-            .run_if(spacebar_pressed)
-    );
-
     App::new()
         .add_plugins(DefaultPlugins)
+        // add out states driver
         .add_loopless_state(GameState::MainMenu)
         // Add a FixedTimestep, cuz we can!
-        .add_stage_before(
-            CoreStage::Update,
-            "FixedUpdate",
-            FixedTimestepStage::from_stage(Duration::from_millis(125), fixedupdate),
+        .add_fixed_timestep(
+            Duration::from_millis(125),
+            // give it a label
+            "my_fixed_update",
         )
         // menu setup (state enter) systems
         .add_enter_system(GameState::MainMenu, setup_menu)
@@ -70,6 +61,14 @@ fn main() {
                 .with_system(clear_on_del)
                 .with_system(spin_sprites.run_if_not(spacebar_pressed))
                 .into()
+        )
+        .add_fixed_timestep_system(
+            "my_fixed_update", 0,
+            spawn_sprite
+                // only in-game!
+                .run_in_state(GameState::InGame)
+                // only while the spacebar is pressed
+                .run_if(spacebar_pressed)
         )
         // our other various systems:
         .add_system(debug_current_state)
