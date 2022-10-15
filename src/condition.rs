@@ -528,90 +528,7 @@ where
 
 /// Extension trait for conditional exclusive systems
 pub trait IntoConditionalExclusiveSystem<Params, SystemType>: IntoExclusiveSystem<Params, SystemType> + Sized {
-    fn into_conditional(self) -> ConditionalExclusiveSystem;
-
-    fn run_if<Condition, CondParams>(self, condition: Condition) -> ConditionalExclusiveSystem
-    where
-        Condition: IntoSystem<(), bool, CondParams>,
-    {
-        self.into_conditional().run_if(condition)
-    }
-
-    fn run_if_not<Condition, CondParams>(
-        self,
-        condition: Condition,
-    ) -> ConditionalExclusiveSystem
-    where
-        Condition: IntoSystem<(), bool, CondParams>,
-    {
-        self.into_conditional().run_if_not(condition)
-    }
-
-    fn run_on_event<T: Send + Sync + 'static>(self) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_on_event::<T>()
-    }
-
-    fn run_if_resource_exists<T: Resource>(self) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_if_resource_exists::<T>()
-    }
-
-    fn run_unless_resource_exists<T: Resource>(self) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_unless_resource_exists::<T>()
-    }
-
-    fn run_if_resource_added<T: Resource>(self) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_if_resource_added::<T>()
-    }
-
-    fn run_if_resource_removed<T: Resource>(self) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_if_resource_removed::<T>()
-    }
-
-    fn run_if_resource_equals<T: Resource + PartialEq>(
-        self,
-        value: T,
-    ) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_if_resource_equals(value)
-    }
-
-    fn run_unless_resource_equals<T: Resource + PartialEq>(
-        self,
-        value: T,
-    ) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_unless_resource_equals(value)
-    }
-
-    #[cfg(feature = "states")]
-    fn run_in_state<T: bevy_ecs::schedule::StateData>(
-        self,
-        state: T,
-    ) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_in_state(state)
-    }
-
-    #[cfg(feature = "states")]
-    fn run_not_in_state<T: bevy_ecs::schedule::StateData>(
-        self,
-        state: T,
-    ) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_not_in_state(state)
-    }
-
-    #[cfg(feature = "bevy-compat")]
-    fn run_in_bevy_state<T: bevy_ecs::schedule::StateData>(
-        self,
-        state: T,
-    ) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_in_bevy_state(state)
-    }
-
-    #[cfg(feature = "bevy-compat")]
-    fn run_not_in_bevy_state<T: bevy_ecs::schedule::StateData>(
-        self,
-        state: T,
-    ) -> ConditionalExclusiveSystem {
-        self.into_conditional().run_not_in_bevy_state(state)
-    }
+    fn into_conditional_exclusive(self) -> ConditionalExclusiveSystem;
 }
 
 impl<S, Params, SystemType> IntoConditionalExclusiveSystem<Params, SystemType> for S
@@ -619,7 +536,7 @@ where
     S: IntoExclusiveSystem<Params, SystemType>,
     SystemType: ExclusiveSystem,
 {
-    fn into_conditional(self) -> ConditionalExclusiveSystem {
+    fn into_conditional_exclusive(self) -> ConditionalExclusiveSystem {
         ConditionalExclusiveSystem {
             system: Box::new(self.exclusive_system()),
             conditions: Vec::new(),
