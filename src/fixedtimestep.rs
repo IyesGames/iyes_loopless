@@ -20,7 +20,19 @@ impl FixedTimesteps {
     ///
     /// Returns [`Some`] only if called inside a fixed timestep stage.
     pub fn get_current(&self) -> Option<&FixedTimestepInfo> {
-        self.current.as_ref().and_then(|label| self.get(label))
+        self.current.as_ref().and_then(|label| self.info.get(label))
+    }
+
+    /// Returns a mut reference to the timestep info for a label.
+    pub fn get_mut(&mut self, label: &str) -> Option<&mut FixedTimestepInfo> {
+        self.info.get_mut(label)
+    }
+
+    /// Returns a mut reference to the timestep info for the currently running stage.
+    ///
+    /// Returns [`Some`] only if called inside a fixed timestep stage.
+    pub fn get_current_mut(&mut self) -> Option<&mut FixedTimestepInfo> {
+        self.current.as_ref().and_then(|label| self.info.get_mut(label))
     }
 }
 
