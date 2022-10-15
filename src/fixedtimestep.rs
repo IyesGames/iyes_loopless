@@ -76,6 +76,10 @@ impl FixedTimestepInfo {
     pub fn unpause(&mut self) {
         self.paused = false;
     }
+
+    pub fn toggle_pause(&mut self) {
+        self.paused = !self.paused;
+    }
 }
 
 /// A Stage that runs a number of child stages with a fixed timestep
