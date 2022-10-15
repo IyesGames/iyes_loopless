@@ -4,43 +4,73 @@ use rand::prelude::*;
 
 use std::time::Duration;
 
-/// Stage Label for our fixed update stage
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, StageLabel)]
-struct MyFixedUpdate;
-
 fn main() {
-    // prepare our stages for fixed timestep
-    // (creating variables to prevent code indentation
-    // from drifting too far to the right)
-
-    // to showcase use of Commands, we will spawn entities in one stage ...
-    let mut fixed_spawn_stage = SystemStage::parallel();
-    fixed_spawn_stage.add_system(spawn_entities);
-    // ... and mutate their transform in another
-    let mut post_fixed_spawn_stage = SystemStage::parallel();
-    post_fixed_spawn_stage.add_system(reposition_entities);
-    post_fixed_spawn_stage.add_system(debug_fixed_timestep);
-
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_stage_before(
-            CoreStage::Update,
-            MyFixedUpdate,
-            FixedTimestepStage::new(Duration::from_millis(250))
-                .with_stage(fixed_spawn_stage)
-                .with_stage(post_fixed_spawn_stage),
+
+        // add fixed timestep stage to the default location (before Update)
+        .add_fixed_timestep(
+            Duration::from_millis(250),
+            // give it a label
+            "my_fixed_update",
         )
+
+        // add an additional child "sub-stage" under the fixed timestep;
+        // this will let us apply Commands within one fixed timestep run
+        .add_fixed_timestep_child_stage("my_fixed_update")
+
+        // add a system to our fixed timestep (first sub-stage)
+        .add_fixed_timestep_system("my_fixed_update", 0, debug_fixed_timestep)
+
+        // to showcase use of Commands, we will spawn entities in one sub-stage (0) ...
+        .add_fixed_timestep_system("my_fixed_update", 0, spawn_entities)
+        // ... and mutate their transform in another (1)
+        .add_fixed_timestep_system("my_fixed_update", 1, reposition_entities)
+
         .add_startup_system(setup_camera)
         .add_system(debug_new_count)
         .add_system(random_hiccups)
+        .add_system(kbd_control_timestep)
+        .add_system(clear_entities)
         .run();
 }
 
 #[derive(Component)]
 struct MySprite;
 
+/// Spawn a MySprite entity
+fn spawn_entities(mut commands: Commands) {
+    let mut rng = thread_rng();
+
+    commands
+        .spawn_bundle(SpriteBundle {
+            sprite: Sprite {
+                color: Color::rgba(rng.gen(), rng.gen(), rng.gen(), 0.5),
+                custom_size: Some(Vec2::new(64., 64.)),
+                ..Default::default()
+            },
+            // the `reposition_entities` system will take care of X and Y ;)
+            transform: Transform::from_xyz(0.0, 0.0, rng.gen_range(0.0..100.0)),
+            ..Default::default()
+        })
+        .insert(MySprite);
+}
+
+/// Move each sprite to a random X,Y position
+fn reposition_entities(mut q: Query<&mut Transform, With<MySprite>>) {
+    let mut rng = thread_rng();
+
+    for mut transform in q.iter_mut() {
+        transform.translation.x = rng.gen_range(-420.0..420.0);
+        transform.translation.y = rng.gen_range(-420.0..420.0);
+    }
+}
+
 /// Every fixed timestep, print info about the timestep parameters
-fn debug_fixed_timestep(info: Res<FixedTimestepInfo>) {
+/// (shows how to get it from FixedTimesteps)
+fn debug_fixed_timestep(timesteps: Res<FixedTimesteps>) {
+    // unwrap: this system will run inside of the fixed timestep
+    let info = timesteps.get_current().unwrap();
     println!("Fixed timestep duration: {:?} ({} Hz).", info.timestep(), info.rate());
     println!("Overstepped by {:.2?} ({:.2}%).", info.remaining(), info.overstep() * 100.0);
 }
@@ -69,31 +99,37 @@ fn random_hiccups() {
     }
 }
 
-/// Spawn a MySprite entity
-fn spawn_entities(mut commands: Commands) {
-    let mut rng = thread_rng();
+/// Keypresses for speeding up / slowing down / pausing the fixed timestep
+/// (by mutating the FixedTimestepInfo from FixedTimesteps)
+fn kbd_control_timestep(
+    kbd: Res<Input<KeyCode>>,
+    mut timesteps: ResMut<FixedTimesteps>,
+) {
+    // this system runs outside of the fixed timestep, so we need
+    // to get the fixed timestep info by label
+    let info = timesteps.get_mut("my_fixed_update").unwrap();
 
-    commands
-        .spawn_bundle(SpriteBundle {
-            sprite: Sprite {
-                color: Color::rgba(rng.gen(), rng.gen(), rng.gen(), 0.5),
-                custom_size: Some(Vec2::new(64., 64.)),
-                ..Default::default()
-            },
-            // the `reposition_entities` system will take care of X and Y ;)
-            transform: Transform::from_xyz(0.0, 0.0, rng.gen_range(0.0..100.0)),
-            ..Default::default()
-        })
-        .insert(MySprite);
+    if kbd.any_just_pressed([KeyCode::Minus, KeyCode::Underline]) {
+        info.step = Duration::from_secs_f32(info.step.as_secs_f32() * 0.75);
+    }
+    if kbd.any_just_pressed([KeyCode::Plus, KeyCode::Equals]) {
+        info.step = Duration::from_secs_f32(info.step.as_secs_f32() * 1.25);
+    }
+    if kbd.just_pressed(KeyCode::Space) {
+        info.toggle_pause();
+    }
 }
 
-/// Move each sprite to a random X,Y position
-fn reposition_entities(mut q: Query<&mut Transform, With<MySprite>>) {
-    let mut rng = thread_rng();
-
-    for mut transform in q.iter_mut() {
-        transform.translation.x = rng.gen_range(-420.0..420.0);
-        transform.translation.y = rng.gen_range(-420.0..420.0);
+/// Clear entities with keypress
+fn clear_entities(
+    mut commands: Commands,
+    kbd: Res<Input<KeyCode>>,
+    q: Query<Entity, With<MySprite>>
+) {
+    if kbd.any_just_pressed([KeyCode::Delete, KeyCode::Back]) {
+        for e in q.iter() {
+            commands.entity(e).despawn();
+        }
     }
 }
 
