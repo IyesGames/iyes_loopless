@@ -8,7 +8,7 @@ pub mod prelude {
     pub use crate::condition::{ConditionHelpers, IntoConditionalSystem, IntoConditionalExclusiveSystem, ConditionSet, AddConditionalToSet};
 
     #[cfg(feature = "fixedtimestep")]
-    pub use crate::fixedtimestep::{FixedTimestepInfo, FixedTimestepStage};
+    pub use crate::fixedtimestep::{FixedTimesteps, FixedTimestepStage};
     #[cfg(feature = "fixedtimestep")]
     pub use crate::fixedtimestep::schedule::ScheduleLooplessFixedTimestepExt;
     #[cfg(all(feature = "fixedtimestep", feature = "app"))]
