@@ -13,7 +13,7 @@ Version Compatibility Table:
 |------------|-------------------|
 |`main`      |`bevy_main`        |
 |`0.8`       |`main`             |
-|`0.8`       |`0.7`              |
+|`0.8`       |`0.7`, `0.8`       |
 |`0.7`       |`0.4`, `0.5`, `0.6`|
 |`0.6`       |`0.1`, `0.2`, `0.3`|
 
@@ -35,18 +35,28 @@ the complete scheduling API overhaul that the RFC proposes.
 This way we can have something usable *now*, while the remaining Stageless
 work is still in progress.
 
-## Dependencies
+## Dependencies and Cargo Feature Flags
 
 The "run conditions" functionality is always enabled, and depends only on
 `bevy_ecs`.
 
 The "fixed timestep" functionality is optional (`"fixedtimestep"` cargo
-feature, enabled by default) and adds a dependency on `bevy_time`
-(needed for `Res<Time>`).
+feature) and adds these dependencies:
+ - `bevy_time`
+ - `bevy_utils`
 
-The "states" functionality is optional (`"states"` cargo feature, enabled
-by default) and adds a dependency on `bevy_utils` (to use Bevy's preferred
-`HashMap` implementation).
+The "states" functionality is optional (`"states"` cargo feature) and adds
+these dependencies:
+ - `bevy_utils`
+
+The `"app"` cargo feature enables extension traits that add new builder
+methods to `App`, allowing more ergonomic access to the features of this
+crate. Adds a dependency on `bevy_app`.
+
+The `"bevy-compat"` feature adds Run Conditions for compatibility with
+Bevy's legacy states implementation.
+
+All of the optional cargo features are enabled by default.
 
 ## Run Conditions
 
@@ -131,8 +141,12 @@ If you need to use classic Bevy States, you can use these adapters to check them
 
 You can use Bevy labels for system ordering, as usual.
 
-There is also `ConditionSet` (similar to Bevy `SystemSet`) for easily applying
-many conditions and labels to many systems:
+**Note:** conditional systems currently only support explicit labels, you cannot use
+Bevy's "ordering by function name" syntax. E.g: `.after(another_system)` does *not* work,
+you need to create a label.
+
+There is also `ConditionSet` (similar to Bevy `SystemSet`): syntax sugar for
+easily applying conditions and labels that are common to many systems:
 
 ```rust
 use bevy::prelude::*;
@@ -170,72 +184,81 @@ fn main() {
 }
 ```
 
+**NOTE:** Due to some limitations with Bevy, `label`/`before`/`after` are
+*not* supported on individual systems within a `ConditionSet`. You can only
+use labels and ordering on the entire set, to apply them to all member
+systems. If some systems need different ordering, just add them individually
+with `.add_system`.
+
 ## Fixed Timestep
 
-This crate offers a fixed timestep implementation that uses the Bevy `Stage`
-API. You can add a `FixedTimestepStage` to your `App`, wherever you would
-like it to run. Typically, a good place would be before `CoreStage::Update`.
+This crate offers a fixed timestep implementation that runs as a separate
+Stage in the Bevy schedule. This way, it does not conflict with any other
+functionality. You can easily use [run conditions](#run-conditions) and
+[states](#states) to control your fixed timestep systems.
 
-It is a container for multiple child stages. You might want to add multiple
-child `SystemStage`s, if you'd like to use `Commands` in your systems and
-have them applied between each child stage. Or you can just use one if you
-don't care. :)
+It is possible to add multiple "sub-stages" within a fixed timestep, allowing
+you to apply `Commands` within a single timestep run. For example, if you want
+to spawn entities and then do something with them, on the same tick.
 
-Every frame, the `FixedTimestepStage` will accumulate the time delta. When
-it goes over the set timestep value, it will run all the child stages. It
-will repeat the sequence of child stages multiple times if needed, if
-more than one timestep has accumulated.
+It is also possible to have multiple independent fixed timesteps, should you
+need to.
 
-(see `examples/fixedtimestep.rs` for a complete working example)
+(see `examples/fixedtimestep.rs` for a more complex working example)
 
 ```rust
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
 
 fn main() {
-    // prepare our stages for fixed timestep
-    // (creating variables to prevent code indentation
-    // from drifting too far to the right)
-
-    // can create multiple, to use Commands
-    let mut fixed_first = SystemStage::parallel();
-    // ... add systems to it ...
-
-    let mut fixed_second = SystemStage::parallel();
-    // ... add systems to it ...
-
     App::new()
         .add_plugins(DefaultPlugins)
         // add the fixed timestep stage:
-        .add_stage_before(
-            CoreStage::Update,
+        // (in the default position, before CoreStage::Update)
+        .add_fixed_timestep(
+            Duration::from_millis(250),
+            // we need to give it a string name, to refer to it
             "my_fixed_update",
-            FixedTimestepStage::new(Duration::from_millis(250))
-                .with_stage(fixed_first)
-                .with_stage(fixed_second)
         )
-        // add normal bevy systems:
-        .add_startup_system(setup)
-        .add_system(do_thing)
+        // add fixed timestep systems:
+        .add_fixed_timestep_system(
+            "my_fixed_update", 0, // fixed timestep name, sub-stage index
+            // it can be a conditional system!
+            my_simulation
+                .run_if(some_condition)
+                .run_in_state(AppState::InGame)
+                .after("some_label")
+        )
         .run();
 }
 ```
 
-Since this implementation does not use Run Criteria, you are free to use
-Run Criteria for other purposes. Or better yet: don't, and use the [Run
-Conditions](#run-conditions) from this crate instead! ;)
+Every frame, the `FixedTimestepStage` will accumulate the time delta. When
+it goes over the set timestep value, it will run all the child stages. It
+will repeat the sequence of child stages multiple times if needed, if
+more than one timestep has accumulated.
 
-### Fixed Timestep Info
+### Fixed Timestep Control
 
-From within your fixed timestep systems, you can use `Res<FixedTimestepInfo>`
-to get info about the current fixed timestep parameters, like the timestep
-duration and amount of over-step.
-
-This resource is managed by the `FixedTimestepStage`. It will be inserted
-before your systems get run, and removed afterwards.
+You can use the `FixedTimesteps` resource (make sure it is the one from this
+crate, not the one from Bevy with the same name) to access information about a
+fixed timestep and to control its parameters, like the timestep duration.
 
 ```rust
-fn my_fixed_update(info: Res<FixedTimestepInfo>) {
+fn timestep_control(mut timesteps: ResMut<FixedTimestep>) {
+    // we can access our timestep by name
+    let info = timesteps.get_mut("my_fixed_update").unwrap();
+    // set a different duration
+    info.step = Duration::from_millis(125);
+    // pause it
+    info.paused = true;
+}
+
+/// Print info about the fixed timestep this system runs in
+fn debug_fixed(timesteps: Res<FixedTimesteps>) {
+    // from within a system that runs inside the fixed timestep,
+    // you can use `.get_current`, no need for the timestep name:
+    let info = timesteps.get_current().unwrap();
     println!("Fixed timestep duration: {:?} ({} Hz).", info.timestep(), info.rate());
     println!("Overstepped by {:?} ({}%).", info.remaining(), info.overstep() * 100.0);
 }
@@ -274,16 +297,13 @@ You can add enter/exit systems to be executed on state transitions, using
 For advanced scenarios, you could add a custom stage type instead, using
 `.set_enter_stage(state, stage)` and `.set_exit_stage(state, stage)`.
 
-### Triggering a Transition
+### State Transition
 
 When the `StateTransitionStage` runs, it will check if a `NextState` resource
 exists. If yes, it will remove it and perform a transition:
  - run the "exit stage" (if any) for the current state
  - change the value of `CurrentState`
  - run the "enter stage" (if any) for the next state
-
-Please do not manually insert or remove `CurrentState<T>`. It should be managed
-entirely by `StateTransitionStage`. It will insert it when it first runs.
 
 If you want to perform a state transition, simply insert a `NextState<T>`.
 If you mutate `CurrentState<T>`, you will effectively change state without
@@ -313,14 +333,6 @@ enum GameState {
 }
 
 fn main() {
-    // stage for anything we want to do on a fixed timestep
-    let mut fixedupdate = SystemStage::parallel();
-    fixedupdate.add_system(
-        fixed_thing
-            // only do it in-game
-            .run_in_state(GameState::InGame)
-    );
-
     App::new()
         .add_plugins(DefaultPlugins)
         // Add our state type
@@ -328,10 +340,14 @@ fn main() {
         // If we had more state types, we would add them too...
 
         // Add a FixedTimestep, cuz we can!
-        .add_stage_before(
-            CoreStage::Update,
-            "FixedUpdate",
-            FixedTimestepStage::from_stage(Duration::from_millis(125), fixedupdate)
+        .add_fixed_timestep(
+            Duration::from_millis(250),
+            "my_fixed_update",
+        )
+        .add_fixed_timestep_system(
+            "my_fixed_update", 0,
+            my_simulation
+                .run_in_state(AppState::InGame)
         )
 
         // Add our various systems
