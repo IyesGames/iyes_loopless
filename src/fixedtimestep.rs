@@ -13,7 +13,7 @@ pub struct FixedTimesteps {
 }
 
 impl FixedTimesteps {
-    /// Returns a reference to the timestep info for a label.
+    /// Returns a reference to the timestep info for a given timestep by name.
     pub fn get(&self, label: TimestepLabel) -> Option<&FixedTimestepInfo> {
         self.info.get(label)
     }
@@ -25,7 +25,26 @@ impl FixedTimesteps {
         self.current.as_ref().and_then(|label| self.info.get(label))
     }
 
-    /// Returns a mut reference to the timestep info for a label.
+    /// Panicking version of [`get_current`]
+    pub fn current(&self) -> &FixedTimestepInfo {
+        self.get_current()
+            .expect("FixedTimesteps::current can only be used when running inside a fixed timestep.")
+    }
+
+    /// Returns a reference to the timestep info, assuming you only have one.
+    pub fn get_single(&self) -> Option<&FixedTimestepInfo> {
+        if self.info.len() != 1 {
+            return None;
+        }
+        self.info.values().next()
+    }
+
+    /// Panicking version of [`get_single`]
+    pub fn single(&self) -> &FixedTimestepInfo {
+        self.get_single().expect("Expected exactly one fixed timestep.")
+    }
+
+    /// Returns a mut reference to the timestep info for a given timestep by name.
     pub fn get_mut(&mut self, label: TimestepLabel) -> Option<&mut FixedTimestepInfo> {
         self.info.get_mut(label)
     }
@@ -35,6 +54,25 @@ impl FixedTimesteps {
     /// Returns [`Some`] only if called inside a fixed timestep stage.
     pub fn get_current_mut(&mut self) -> Option<&mut FixedTimestepInfo> {
         self.current.as_ref().and_then(|label| self.info.get_mut(label))
+    }
+
+    /// Panicking version of [`get_current_mut`]
+    pub fn current_mut(&mut self) -> &mut FixedTimestepInfo {
+        self.get_current_mut()
+            .expect("FixedTimesteps::current can only be used when running inside a fixed timestep.")
+    }
+
+    /// Returns a mut reference to the timestep info, assuming you only have one.
+    pub fn get_single_mut(&mut self) -> Option<&mut FixedTimestepInfo> {
+        if self.info.len() != 1 {
+            return None;
+        }
+        self.info.values_mut().next()
+    }
+
+    /// Panicking version of [`get_single_mut`]
+    pub fn single_mut(&mut self) -> &mut FixedTimestepInfo {
+        self.get_single_mut().expect("Expected exactly one fixed timestep.")
     }
 }
 
