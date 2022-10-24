@@ -1,3 +1,13 @@
+//! States implementation based on Run Conditions and a transitions Stage
+//!
+//! This is an alternative to Bevy's States. The current state is represented as a
+//! resource and can be checked using Run Conditions. Transitions (running exit/enter
+//! systems) are performed in a dedicated Stage. You can combine all of this
+//! functionality with other scheduling functionality from this crate: run conditions,
+//! fixed timesteps, etc. You can have multiple state types (to represent orthogonal
+//! aspects of your application) and combine them trivially.
+//!
+//! (see `examples/menu.rs` for a full example)
 use bevy_ecs::schedule::{Stage, StateData, StageLabel, IntoSystemDescriptor, SystemSet, SystemStage};
 use bevy_ecs::world::World;
 use bevy_utils::HashMap;
@@ -44,9 +54,10 @@ impl<T: bevy_inspector_egui::Inspectable> bevy_inspector_egui::Inspectable for N
 ///  4. run the enter stage (if any) for the next stage
 ///
 /// This stage manages the [`CurrentState`] resource. It will initialize it if it
-/// doesn't exist, and update it on state transitions. Please don't mutate that
-/// resource manually. Insert a `NextState` resource (you can do it via `Commands`)
-/// to change state.
+/// doesn't exist, and update it on state transitions.
+///
+/// If you mutate the value of [`CurrentState`] directly, instead of using [`NextState`],
+/// then the state will be changed without running any exit/enter systems!
 ///
 /// A single run of this stage can execute multiple transitions, if you insert a
 /// new instance of `NextState` from within the exit or enter stages.
@@ -237,6 +248,7 @@ impl<T: StateData> Stage for StateTransitionStage<T> {
     }
 }
 
+/// Type used as a Bevy Stage Label for state transition stages
 #[derive(Debug, Clone)]
 pub struct StateTransitionStageLabel(TypeId, String);
 
@@ -248,12 +260,14 @@ impl StageLabel for StateTransitionStageLabel {
 }
 
 impl StateTransitionStageLabel {
+    /// Construct the label for a stage to drive the state type T
     pub fn from_type<T: StateData>() -> Self {
         use std::any::type_name;
         StateTransitionStageLabel(TypeId::of::<T>(), type_name::<T>().to_owned())
     }
 }
 
+/// Extensions to `bevy_app`
 #[cfg(feature = "app")]
 pub mod app {
     use bevy_ecs::schedule::{StageLabel, Stage, StateData, IntoSystemDescriptor, SystemSet};
@@ -261,6 +275,7 @@ pub mod app {
 
     use super::{StateTransitionStage, StateTransitionStageLabel};
 
+    /// Extension trait with the methods to add to Bevy's `App`
     pub trait AppLooplessStateExt {
         /// Add a `StateTransitionStage` in the default position
         ///
@@ -363,11 +378,13 @@ pub mod app {
     }
 }
 
+/// Extensions to Bevy Schedule
 pub mod schedule {
     use bevy_ecs::schedule::{StageLabel, Stage, StateData, IntoSystemDescriptor, SystemSet, Schedule};
 
     use super::{StateTransitionStage, StateTransitionStageLabel};
 
+    /// Extension trait with the methods to add to Bevy's `Schedule`
     pub trait ScheduleLooplessStateExt {
         /// Add a `StateTransitionStage` after the specified stage
         fn add_loopless_state_after_stage<T: StateData>(&mut self, stage: impl StageLabel, init: T) -> &mut Schedule;

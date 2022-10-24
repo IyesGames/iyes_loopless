@@ -18,6 +18,9 @@
 //! really sure about what you are doing. If you add the same condition to many
 //! systems, it *will run with each one*.
 //!
+//! **Note:** conditional systems currently only support explicit labels, you cannot use
+//! Bevy's "ordering by function name" syntax. E.g: `.after(another_system)` does *not* work,
+//! you need to create a label.
 
 use std::borrow::Cow;
 
@@ -56,6 +59,12 @@ impl From<ParallelSystemDescriptor> for BevyDescriptorWorkaround {
     }
 }
 
+/// A general system + conditions + labels/ordering
+///
+/// This struct combines everything needed to construct a `ConditionalSystem`
+/// and add it to the Bevy schedule.
+///
+/// It impls `IntoSystemDescriptor`, allowing it to be used with Bevy's APIs.
 pub struct ConditionalSystemDescriptor {
     system: BoxedSystem,
     conditions: Vec<BoxedCondition>,
@@ -63,6 +72,7 @@ pub struct ConditionalSystemDescriptor {
 }
 
 impl ConditionalSystemDescriptor {
+    /// Add a label for the system
     pub fn add_label(&mut self, label: impl SystemLabel) {
         self.label_shits.push(Box::new(move |wa| {
             match wa {
@@ -75,6 +85,7 @@ impl ConditionalSystemDescriptor {
             }
         }))
     }
+    /// Add a before-ordering for the system
     pub fn add_before(&mut self, label: impl SystemLabel) {
         self.label_shits.push(Box::new(move |wa| {
             match wa {
@@ -87,6 +98,7 @@ impl ConditionalSystemDescriptor {
             }
         }))
     }
+    /// Add an after-ordering for the system
     pub fn add_after(&mut self, label: impl SystemLabel) {
         self.label_shits.push(Box::new(move |wa| {
             match wa {
@@ -100,16 +112,19 @@ impl ConditionalSystemDescriptor {
         }))
     }
 
+    /// Add a label for the system (builder)
     pub fn label(mut self, label: impl SystemLabel) -> Self {
         self.add_label(label);
         self
     }
 
+    /// Add a before-ordering for the system (builder)
     pub fn before(mut self, label: impl SystemLabel) -> Self {
         self.add_before(label);
         self
     }
 
+    /// Add an after-ordering for the system (builder)
     pub fn after(mut self, label: impl SystemLabel) -> Self {
         self.add_after(label);
         self
@@ -311,7 +326,9 @@ impl ConditionHelpers for ConditionalExclusiveSystem {
     }
 }
 
+/// Trait to help impl the default helper methods we provide for systems/sets
 pub trait ConditionHelpers: Sized {
+    /// The base run condition; other methods impld in terms of this
     fn run_if<Condition, Params>(self, condition: Condition) -> Self
     where
         Condition: IntoSystem<(), bool, Params>;
@@ -427,8 +444,10 @@ pub trait ConditionHelpers: Sized {
 
 /// Extension trait allowing any system to be converted into a `ConditionalSystem`
 pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
+    /// Create a conditional system descriptor from a general bevy system
     fn into_conditional(self) -> ConditionalSystemDescriptor;
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     fn run_if<Condition, CondParams>(self, condition: Condition) -> ConditionalSystemDescriptor
     where
         Condition: IntoSystem<(), bool, CondParams>,
@@ -436,6 +455,7 @@ pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
         self.into_conditional().run_if(condition)
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     fn run_if_not<Condition, CondParams>(
         self,
         condition: Condition,
@@ -446,26 +466,32 @@ pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
         self.into_conditional().run_if_not(condition)
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     fn run_on_event<T: Send + Sync + 'static>(self) -> ConditionalSystemDescriptor {
         self.into_conditional().run_on_event::<T>()
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     fn run_if_resource_exists<T: Resource>(self) -> ConditionalSystemDescriptor {
         self.into_conditional().run_if_resource_exists::<T>()
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     fn run_unless_resource_exists<T: Resource>(self) -> ConditionalSystemDescriptor {
         self.into_conditional().run_unless_resource_exists::<T>()
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     fn run_if_resource_added<T: Resource>(self) -> ConditionalSystemDescriptor {
         self.into_conditional().run_if_resource_added::<T>()
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     fn run_if_resource_removed<T: Resource>(self) -> ConditionalSystemDescriptor {
         self.into_conditional().run_if_resource_removed::<T>()
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     fn run_if_resource_equals<T: Resource + PartialEq>(
         self,
         value: T,
@@ -473,6 +499,7 @@ pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
         self.into_conditional().run_if_resource_equals(value)
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     fn run_unless_resource_equals<T: Resource + PartialEq>(
         self,
         value: T,
@@ -480,6 +507,7 @@ pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
         self.into_conditional().run_unless_resource_equals(value)
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     #[cfg(feature = "states")]
     fn run_in_state<T: bevy_ecs::schedule::StateData>(
         self,
@@ -488,6 +516,7 @@ pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
         self.into_conditional().run_in_state(state)
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     #[cfg(feature = "states")]
     fn run_not_in_state<T: bevy_ecs::schedule::StateData>(
         self,
@@ -496,6 +525,7 @@ pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
         self.into_conditional().run_not_in_state(state)
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     #[cfg(feature = "bevy-compat")]
     fn run_in_bevy_state<T: bevy_ecs::schedule::StateData>(
         self,
@@ -504,6 +534,7 @@ pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
         self.into_conditional().run_in_bevy_state(state)
     }
 
+    /// (provided so users don't have to type `.into_conditional()` first)
     #[cfg(feature = "bevy-compat")]
     fn run_not_in_bevy_state<T: bevy_ecs::schedule::StateData>(
         self,
@@ -528,6 +559,7 @@ where
 
 /// Extension trait for conditional exclusive systems
 pub trait IntoConditionalExclusiveSystem<Params, SystemType>: IntoExclusiveSystem<Params, SystemType> + Sized {
+    /// Construct a conditional exclusive system
     fn into_conditional_exclusive(self) -> ConditionalExclusiveSystem;
 }
 
@@ -544,6 +576,11 @@ where
     }
 }
 
+/// Syntax sugar to apply the same conditions and/or labels to many systems
+///
+/// This struct takes care of accumulating all the conditions and labels/ordering
+/// you desire. This is the first step of the process. When you want to add
+/// systems to the set, it will be converted into a [`ConditionSystemSet`].
 pub struct ConditionSet {
     /// "applicator": closure that adds the condition to the system
     conditions: Vec<Box<dyn Fn(&mut ConditionalSystemDescriptor)>>,
@@ -551,12 +588,17 @@ pub struct ConditionSet {
     labellers: Vec<Box<dyn FnOnce(SystemSet) -> SystemSet>>,
 }
 
+/// Syntax sugar to apply the same conditions and/or labels to many systems
+///
+/// This struct is the second step of the process. It accumulates the systems,
+/// and converts into a Bevy `SystemSet`.
 pub struct ConditionSystemSet {
     systems: Vec<ConditionalSystemDescriptor>,
     conditions: ConditionSet,
 }
 
 impl ConditionSet {
+    /// Create an empty `ConditionSet`
     pub fn new() -> Self {
         Self {
             conditions: Vec::new(),
@@ -564,6 +606,7 @@ impl ConditionSet {
         }
     }
 
+    /// Add the first system, converting into a `ConditionSystemSet`
     pub fn with_system<S, P>(self, system: S) -> ConditionSystemSet
     where
         S: AddConditionalToSet<ConditionSystemSet, P>,
@@ -573,16 +616,19 @@ impl ConditionSet {
         csset
     }
 
+    /// Add a label
     pub fn label(mut self, label: impl SystemLabel) -> Self {
         self.labellers.push(Box::new(move |set: SystemSet| set.label(label)));
         self
     }
 
+    /// Add a before-ordering
     pub fn before(mut self, label: impl SystemLabel) -> Self {
         self.labellers.push(Box::new(move |set: SystemSet| set.before(label)));
         self
     }
 
+    /// Add an after-ordering
     pub fn after(mut self, label: impl SystemLabel) -> Self {
         self.labellers.push(Box::new(move |set: SystemSet| set.after(label)));
         self
@@ -590,12 +636,14 @@ impl ConditionSet {
 }
 
 impl ConditionSystemSet {
+    /// Add a system to the set
     pub fn add_system<S, P>(&mut self, system: S)
     where
         S: AddConditionalToSet<ConditionSystemSet, P>,
     {
         system.add_to_set(self);
     }
+    /// Add a system to the set (builder)
     pub fn with_system<S, P>(mut self, system: S) -> Self
     where
         S: AddConditionalToSet<ConditionSystemSet, P>,
@@ -636,7 +684,9 @@ impl From<ConditionSystemSet> for SystemSet {
     }
 }
 
+/// Helper trait to make syntax for adding systems to [`ConditionSystemSet`] nicer
 pub trait AddConditionalToSet<Set, Params> {
+    /// Add self to the set
     fn add_to_set(self, set: &mut Set);
 }
 
