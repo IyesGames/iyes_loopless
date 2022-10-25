@@ -352,7 +352,7 @@ impl Stage for FixedTimestepStage {
 
 /// Type used as a Bevy Stage Label for fixed timestep stages
 #[derive(Debug, Clone)]
-pub struct FixedTimestepStageLabel(TimestepName);
+pub struct FixedTimestepStageLabel(pub TimestepName);
 
 impl StageLabel for FixedTimestepStageLabel {
     fn as_str(&self) -> &'static str {
