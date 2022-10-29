@@ -308,6 +308,8 @@ impl Stage for FixedTimestepStage {
             }
         }
 
+        self.store_fixedtimestepinfo(world);
+
         let mut n_steps = 0;
 
         while self.accumulator >= self.step {
