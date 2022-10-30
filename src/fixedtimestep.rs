@@ -308,8 +308,6 @@ impl Stage for FixedTimestepStage {
             }
         }
 
-        self.store_fixedtimestepinfo(world);
-
         let mut n_steps = 0;
 
         while self.accumulator >= self.step {
@@ -337,6 +335,10 @@ impl Stage for FixedTimestepStage {
 
         if let Some(mut timesteps) = world.get_resource_mut::<FixedTimesteps>() {
             timesteps.current = None;
+        }
+
+        if n_steps == 0 {
+            self.store_fixedtimestepinfo(world);
         }
 
         if n_steps == 1 {
