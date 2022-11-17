@@ -1,6 +1,6 @@
 //! Conditional systems supporting multiple run conditions
 //!
-//! This is an alternative to Bevy's Run Criteria, inspired by Bevy's `ChainSystem` and the Stageless RFC.
+//! This is an alternative to Bevy's Run Criteria, inspired by Bevy's `PipeSystem` and the Stageless RFC.
 //!
 //! Run Conditions are systems that return `bool`.
 //!
@@ -30,8 +30,8 @@ use bevy_ecs::{
     event::EventReader,
     prelude::Local,
     query::Access,
-    schedule::{SystemSet, IntoSystemDescriptor, SystemLabel, ParallelSystemDescriptorCoercion, ParallelSystemDescriptor},
-    system::{In, IntoChainSystem, IntoSystem, Res, Resource, System, BoxedSystem, ExclusiveSystem, IntoExclusiveSystem},
+    schedule::{SystemSet, IntoSystemDescriptor, SystemLabel, SystemDescriptor},
+    system::{In, IntoPipeSystem, IntoSystem, Res, Resource, System, BoxedSystem, AsSystemLabel},
     world::World,
 };
 
@@ -44,7 +44,7 @@ type SystemLabelApplicator = Box<dyn FnOnce(BevyDescriptorWorkaround) -> BevyDes
 
 enum BevyDescriptorWorkaround {
     System(ConditionalSystem),
-    Descriptor(ParallelSystemDescriptor),
+    Descriptor(SystemDescriptor),
 }
 
 impl From<ConditionalSystem> for BevyDescriptorWorkaround {
@@ -53,8 +53,8 @@ impl From<ConditionalSystem> for BevyDescriptorWorkaround {
     }
 }
 
-impl From<ParallelSystemDescriptor> for BevyDescriptorWorkaround {
-    fn from(system: ParallelSystemDescriptor) -> Self {
+impl From<SystemDescriptor> for BevyDescriptorWorkaround {
+    fn from(system: SystemDescriptor) -> Self {
         Self::Descriptor(system)
     }
 }
@@ -132,7 +132,7 @@ impl ConditionalSystemDescriptor {
 }
 
 impl IntoSystemDescriptor<()> for ConditionalSystemDescriptor {
-    fn into_descriptor(mut self) -> bevy_ecs::schedule::SystemDescriptor {
+    fn into_descriptor(mut self) -> SystemDescriptor {
         let conditional = ConditionalSystem {
             system: self.system,
             conditions: self.conditions,
@@ -140,15 +140,6 @@ impl IntoSystemDescriptor<()> for ConditionalSystemDescriptor {
             archetype_component_access: Default::default(),
         };
 
-        // NOTE: Bevy has gone to great lengths to make my life painful.
-        // We cannot construct a system descriptor directly, because
-        // the fields in `bevy_ecs` are not `pub`, and all the traits are
-        // crafted in a way that doesn't let us do it easily.
-        // We work around this by going in a round-about way via `IntoSystem`.
-        // The only way is via `ParallelSystemDescriptorCoercion`, and it does
-        // not allow us to create an empty descriptor with just the system,
-        // it can only do the conversion by adding a label or something.
-        // Hence, this abomination of an implementation:
         let mut bevy_wa;
 
         // Try pulling out one label from somewhere
@@ -167,56 +158,53 @@ impl IntoSystemDescriptor<()> for ConditionalSystemDescriptor {
             BevyDescriptorWorkaround::Descriptor(descriptor) => descriptor.into_descriptor(),
         }
     }
-}
 
-/// Represents an [`ExclusiveSystem`](bevy_ecs::system::ExclusiveSystem) that is governed by Run Condition systems.
-///
-/// Each condition is a regular system that must return `bool`.
-///
-/// When ran, it runs as a single aggregate system (similar to Bevy's [`ChainSystem`](bevy_ecs::system::ChainSystem)).
-/// It runs every condition system first, and aborts if any of them return `false`.
-/// The main system will only run if all the conditions return `true`.
-pub struct ConditionalExclusiveSystem {
-    system: Box<dyn ExclusiveSystem>,
-    conditions: Vec<BoxedCondition>,
-}
-
-impl ExclusiveSystem for ConditionalExclusiveSystem {
-    fn name(&self) -> Cow<'static, str> {
-        self.system.name()
+    fn label(self, label: impl SystemLabel) -> SystemDescriptor {
+        let desc = self.into_descriptor();
+        desc.label(label)
     }
 
-    fn initialize(&mut self, world: &mut World) {
-        for condition_system in self.conditions.iter_mut() {
-            condition_system.initialize(world);
-        }
-        self.system.initialize(world);
+    fn before<Marker>(self, label: impl AsSystemLabel<Marker>) -> SystemDescriptor {
+        let desc = self.into_descriptor();
+        desc.before(label)
     }
 
-    fn run(&mut self, world: &mut World) {
-        for condition_system in self.conditions.iter_mut() {
-            let condition_output;
-
-            // SAFETY: we are in an exclusive system
-            // nothing else is running on the World
-            unsafe {
-                condition_output = condition_system.run_unsafe((), world);
-                condition_system.apply_buffers(world);
-            };
-
-            if !condition_output {
-                return;
-            }
-        }
-
-        self.system.run(world)
+    fn after<Marker>(self, label: impl AsSystemLabel<Marker>) -> SystemDescriptor {
+        let desc = self.into_descriptor();
+        desc.after(label)
     }
 
-    fn check_change_tick(&mut self, change_tick: u32) {
-        for condition_system in self.conditions.iter_mut() {
-            condition_system.check_change_tick(change_tick);
-        }
-        self.system.check_change_tick(change_tick);
+    fn ambiguous_with<Marker>(self, label: impl AsSystemLabel<Marker>) -> SystemDescriptor {
+        let desc = self.into_descriptor();
+        desc.ambiguous_with(label)
+    }
+
+    fn with_run_criteria<Marker>(
+        self,
+        run_criteria: impl bevy_ecs::schedule::IntoRunCriteria<Marker>,
+    ) -> SystemDescriptor {
+        let desc = self.into_descriptor();
+        desc.with_run_criteria(run_criteria)
+    }
+
+    fn ignore_all_ambiguities(self) -> SystemDescriptor {
+        let desc = self.into_descriptor();
+        desc.ignore_all_ambiguities()
+    }
+
+    fn at_start(self) -> SystemDescriptor {
+        let desc = self.into_descriptor();
+        desc.at_start()
+    }
+
+    fn before_commands(self) -> SystemDescriptor {
+        let desc = self.into_descriptor();
+        desc.before_commands()
+    }
+
+    fn at_end(self) -> SystemDescriptor {
+        let desc = self.into_descriptor();
+        desc.at_end()
     }
 }
 
@@ -225,7 +213,7 @@ impl ExclusiveSystem for ConditionalExclusiveSystem {
 /// Each condition system must return `bool`.
 ///
 /// This system considers the combined data access of the main system it is based on + all the condition systems.
-/// When ran, it runs as a single aggregate system (similar to Bevy's [`ChainSystem`](bevy_ecs::system::ChainSystem)).
+/// When ran, it runs as a single aggregate system (similar to Bevy's [`PipeSystem`](bevy_ecs::system::PipeSystem)).
 /// It runs every condition system first, and aborts if any of them return `false`.
 /// The main system will only run if all the conditions return `true`.
 pub struct ConditionalSystem {
@@ -235,7 +223,7 @@ pub struct ConditionalSystem {
     archetype_component_access: Access<ArchetypeComponentId>,
 }
 
-// Based on the implementation of Bevy's ChainSystem
+// Based on the implementation of Bevy's PipeSystem
 impl System for ConditionalSystem {
     type In = ();
     type Out = ();
@@ -266,6 +254,11 @@ impl System for ConditionalSystem {
     fn is_send(&self) -> bool {
         let conditions_are_send = self.conditions.iter().all(|system| system.is_send());
         self.system.is_send() && conditions_are_send
+    }
+
+    fn is_exclusive(&self) -> bool {
+        let conditions_are_exclusive = self.conditions.iter().any(|system| system.is_exclusive());
+        self.system.is_exclusive() || conditions_are_exclusive
     }
 
     unsafe fn run_unsafe(&mut self, input: Self::In, world: &World) -> Self::Out {
@@ -300,21 +293,20 @@ impl System for ConditionalSystem {
         }
         self.system.check_change_tick(change_tick);
     }
-}
 
-impl ConditionHelpers for ConditionalSystemDescriptor {
-    /// Builder method for adding more run conditions to a `ConditionalSystem`
-    fn run_if<Condition, Params>(mut self, condition: Condition) -> Self
-    where
-        Condition: IntoSystem<(), bool, Params>,
-    {
-        let condition_system = <Condition as IntoSystem<(), bool, Params>>::into_system(condition);
-        self.conditions.push(Box::new(condition_system));
-        self
+    fn get_last_change_tick(&self) -> u32 {
+        self.system.get_last_change_tick()
+    }
+
+    fn set_last_change_tick(&mut self, last_change_tick: u32) {
+        for condition_system in self.conditions.iter_mut() {
+            condition_system.set_last_change_tick(last_change_tick);
+        }
+        self.system.set_last_change_tick(last_change_tick);
     }
 }
 
-impl ConditionHelpers for ConditionalExclusiveSystem {
+impl ConditionHelpers for ConditionalSystemDescriptor {
     /// Builder method for adding more run conditions to a `ConditionalSystem`
     fn run_if<Condition, Params>(mut self, condition: Condition) -> Self
     where
@@ -338,8 +330,8 @@ pub trait ConditionHelpers: Sized {
     where
         Condition: IntoSystem<(), bool, Params>,
     {
-        // PERF: is using system chaining here inefficient?
-        self.run_if(condition.chain(move |In(x): In<bool>| !x))
+        // PERF: is using system piping here inefficient?
+        self.run_if(condition.pipe(move |In(x): In<bool>| !x))
     }
 
     /// Helper: add a condition to run if there are events of the given type
@@ -557,25 +549,6 @@ where
     }
 }
 
-/// Extension trait for conditional exclusive systems
-pub trait IntoConditionalExclusiveSystem<Params, SystemType>: IntoExclusiveSystem<Params, SystemType> + Sized {
-    /// Construct a conditional exclusive system
-    fn into_conditional_exclusive(self) -> ConditionalExclusiveSystem;
-}
-
-impl<S, Params, SystemType> IntoConditionalExclusiveSystem<Params, SystemType> for S
-where
-    S: IntoExclusiveSystem<Params, SystemType>,
-    SystemType: ExclusiveSystem,
-{
-    fn into_conditional_exclusive(self) -> ConditionalExclusiveSystem {
-        ConditionalExclusiveSystem {
-            system: Box::new(self.exclusive_system()),
-            conditions: Vec::new(),
-        }
-    }
-}
-
 /// Syntax sugar to apply the same conditions and/or labels to many systems
 ///
 /// This struct takes care of accumulating all the conditions and labels/ordering
@@ -727,8 +700,8 @@ impl ConditionSet {
     {
         self.conditions.push(Box::new(move |system| {
             let condition_clone = condition.clone();
-            // PERF: is using system chaining here inefficient?
-            let condition_inverted = condition_clone.chain(move |In(x): In<bool>| !x);
+            // PERF: is using system piping here inefficient?
+            let condition_inverted = condition_clone.pipe(move |In(x): In<bool>| !x);
             system.conditions.insert(0, Box::new(condition_inverted))
         }));
         self

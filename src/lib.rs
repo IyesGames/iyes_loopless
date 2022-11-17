@@ -17,7 +17,7 @@ pub mod state;
 
 /// Prelude: convenient import for all the user-facing APIs provided by the crate
 pub mod prelude {
-    pub use crate::condition::{ConditionHelpers, IntoConditionalSystem, IntoConditionalExclusiveSystem, ConditionSet, AddConditionalToSet};
+    pub use crate::condition::{ConditionHelpers, IntoConditionalSystem, ConditionSet, AddConditionalToSet};
 
     #[cfg(feature = "fixedtimestep")]
     pub use crate::fixedtimestep::{FixedTimesteps, FixedTimestepStage};
