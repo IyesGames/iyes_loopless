@@ -337,6 +337,10 @@ impl Stage for FixedTimestepStage {
             timesteps.current = None;
         }
 
+        if n_steps == 0 {
+            self.store_fixedtimestepinfo(world);
+        }
+
         if n_steps == 1 {
             if self.lock_accum < self.rate_lock.0 {
                 self.lock_accum += 1;
