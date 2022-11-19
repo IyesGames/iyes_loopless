@@ -2,6 +2,11 @@
 
 Notable user-facing changes with each release version will be described in this file.
 
+## [0.9.0]: 2022-11-19
+
+### Changed
+ - Bevy 0.9 compatibility
+
 ## [0.8.0]: 2022-10-24
 
 ### Added
@@ -120,6 +125,7 @@ Notable user-facing changes with each release version will be described in this 
 
 Initial Release
 
+[0.9.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.9.0
 [0.8.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.8.0
 [0.7.1]: https://github.com/IyesGames/iyes_loopless/tree/v0.7.1
 [0.7.0]: https://github.com/IyesGames/iyes_loopless/tree/v0.7.0

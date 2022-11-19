@@ -12,7 +12,8 @@ Version Compatibility Table:
 |Bevy Version|Crate Version      |
 |------------|-------------------|
 |`main`      |`bevy_main`        |
-|`0.8`       |`main`             |
+|`0.9`       |`main`             |
+|`0.9`       |`0.9`              |
 |`0.8`       |`0.7`, `0.8`       |
 |`0.7`       |`0.4`, `0.5`, `0.6`|
 |`0.6`       |`0.1`, `0.2`, `0.3`|
@@ -77,7 +78,7 @@ Each condition is just a Bevy system that outputs (returns) a `bool`.
 
 The conditional system will present itself to
 Bevy as a single big system (similar to Bevy's [system
-chaining](https://bevy-cheatbook.github.io/programming/system-chaining.html)),
+piping](https://bevy-cheatbook.github.io/programming/system-chaining.html)),
 combining the system it was created from with all the condition systems
 attached.
 
