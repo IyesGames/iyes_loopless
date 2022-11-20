@@ -270,6 +270,15 @@ impl System for ConditionalSystem {
         self.system.run_unsafe(input, world)
     }
 
+    fn run(&mut self, input: Self::In, world: &mut World) -> Self::Out {
+        for condition_system in self.conditions.iter_mut() {
+            if !condition_system.run((), world) {
+                return;
+            }
+        }
+        self.system.run(input, world)
+    }
+
     fn apply_buffers(&mut self, world: &mut World) {
         for condition_system in self.conditions.iter_mut() {
             condition_system.apply_buffers(world);
