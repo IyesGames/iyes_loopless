@@ -47,6 +47,7 @@ fn tick_mytimer(mut mytimer: ResMut<MyTimer>, time: Res<Time>) {
     mytimer.timer.tick(time.delta());
 }
 
+#[derive(Resource)]
 struct MyTimer {
     timer: Timer,
 }
@@ -54,18 +55,20 @@ struct MyTimer {
 impl MyTimer {
     fn new() -> Self {
         Self {
-            timer: Timer::from_seconds(1.0, true),
+            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
         }
     }
 }
 
 #[derive(PartialEq, Eq)]
+#[derive(Resource)]
 pub enum GameMode {
     Singleplayer,
     Multiplayer,
 }
 
 #[derive(Default)]
+#[derive(Resource)]
 struct ServerState {
     // ...
 }

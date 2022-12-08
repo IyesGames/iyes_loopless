@@ -42,18 +42,16 @@ struct MySprite;
 fn spawn_entities(mut commands: Commands) {
     let mut rng = thread_rng();
 
-    commands
-        .spawn_bundle(SpriteBundle {
-            sprite: Sprite {
-                color: Color::rgba(rng.gen(), rng.gen(), rng.gen(), 0.5),
-                custom_size: Some(Vec2::new(64., 64.)),
-                ..Default::default()
-            },
-            // the `reposition_entities` system will take care of X and Y ;)
-            transform: Transform::from_xyz(0.0, 0.0, rng.gen_range(0.0..100.0)),
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            color: Color::rgba(rng.gen(), rng.gen(), rng.gen(), 0.5),
+            custom_size: Some(Vec2::new(64., 64.)),
             ..Default::default()
-        })
-        .insert(MySprite);
+        },
+        // the `reposition_entities` system will take care of X and Y ;)
+        transform: Transform::from_xyz(0.0, 0.0, rng.gen_range(0.0..100.0)),
+        ..Default::default()
+    }, MySprite));
 }
 
 /// Move each sprite to a random X,Y position
@@ -134,5 +132,5 @@ fn clear_entities(
 }
 
 fn setup_camera(mut commands: Commands) {
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
 }

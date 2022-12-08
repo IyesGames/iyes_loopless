@@ -133,26 +133,24 @@ fn despawn_with<T: Component>(mut commands: Commands, q: Query<Entity, With<T>>)
 /// Spawn a MySprite entity
 fn spawn_sprite(mut commands: Commands) {
     let mut rng = thread_rng();
-    commands
-        .spawn_bundle(SpriteBundle {
-            sprite: Sprite {
-                color: Color::rgba(rng.gen(), rng.gen(), rng.gen(), 0.5),
-                custom_size: Some(Vec2::new(64., 64.)),
-                ..Default::default()
-            },
-            transform: Transform::from_xyz(
-                rng.gen_range(-420.0..420.0),
-                rng.gen_range(-420.0..420.0),
-                rng.gen_range(0.0..100.0),
-            ),
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            color: Color::rgba(rng.gen(), rng.gen(), rng.gen(), 0.5),
+            custom_size: Some(Vec2::new(64., 64.)),
             ..Default::default()
-        })
-        .insert(MySprite);
+        },
+        transform: Transform::from_xyz(
+            rng.gen_range(-420.0..420.0),
+            rng.gen_range(-420.0..420.0),
+            rng.gen_range(0.0..100.0),
+        ),
+        ..Default::default()
+    }, MySprite));
 }
 
 /// Spawn the camera
 fn setup_camera(mut commands: Commands) {
-    commands.spawn_bundle(Camera2dBundle::default()).insert(GameCamera);
+    commands.spawn((Camera2dBundle::default(), GameCamera));
 }
 
 /// Rotate all the sprites
@@ -164,18 +162,18 @@ fn spin_sprites(mut q: Query<&mut Transform, With<MySprite>>, t: Res<Time>) {
 
 /// Change button color on interaction
 fn butt_interact_visual(
-    mut query: Query<(&Interaction, &mut UiColor), (Changed<Interaction>, With<Button>)>,
+    mut query: Query<(&Interaction, &mut BackgroundColor), (Changed<Interaction>, With<Button>)>,
 ) {
     for (interaction, mut color) in query.iter_mut() {
         match interaction {
             Interaction::Clicked => {
-                *color = UiColor(Color::rgb(0.75, 0.75, 0.75));
+                *color = BackgroundColor(Color::rgb(0.75, 0.75, 0.75));
             }
             Interaction::Hovered => {
-                *color = UiColor(Color::rgb(0.8, 0.8, 0.8));
+                *color = BackgroundColor(Color::rgb(0.8, 0.8, 0.8));
             }
             Interaction::None => {
-                *color = UiColor(Color::rgb(1.0, 1.0, 1.0));
+                *color = BackgroundColor(Color::rgb(1.0, 1.0, 1.0));
             }
         }
     }
@@ -224,48 +222,44 @@ fn setup_menu(mut commands: Commands, ass: Res<AssetServer>) {
     };
 
     let menu = commands
-        .spawn_bundle(NodeBundle {
-            color: UiColor(Color::rgb(0.5, 0.5, 0.5)),
+        .spawn((NodeBundle {
+            background_color: BackgroundColor(Color::rgb(0.5, 0.5, 0.5)),
             style: Style {
                 size: Size::new(Val::Auto, Val::Auto),
                 margin: UiRect::all(Val::Auto),
                 align_self: AlignSelf::Center,
-                flex_direction: FlexDirection::ColumnReverse,
-                //align_items: AlignItems::Stretch,
+                flex_direction: FlexDirection::Column,
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
             ..Default::default()
-        })
-        .insert(MainMenu)
+        }, MainMenu))
         .id();
 
     let butt_enter = commands
-        .spawn_bundle(ButtonBundle {
+        .spawn((ButtonBundle {
             style: butt_style.clone(),
             ..Default::default()
-        })
+        }, EnterButt))
         .with_children(|btn| {
-            btn.spawn_bundle(TextBundle {
+            btn.spawn(TextBundle {
                 text: Text::from_section("Enter Game", butt_textstyle.clone()),
                 ..Default::default()
             });
         })
-        .insert(EnterButt)
         .id();
 
     let butt_exit = commands
-        .spawn_bundle(ButtonBundle {
+        .spawn((ButtonBundle {
             style: butt_style.clone(),
             ..Default::default()
-        })
+        }, ExitButt))
         .with_children(|btn| {
-            btn.spawn_bundle(TextBundle {
+            btn.spawn(TextBundle {
                 text: Text::from_section("Exit Game", butt_textstyle.clone()),
                 ..Default::default()
             });
         })
-        .insert(ExitButt)
         .id();
 
     commands

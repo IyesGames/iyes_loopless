@@ -1,6 +1,6 @@
 [package]
 name = "iyes_loopless"
-version = "0.8.0"
+version = "0.9.1"
 description = "Composable alternatives to Bevy's States/FixedTimestep/RunCriteria"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -29,12 +29,12 @@ app = [
 ]
 
 [dependencies]
-bevy_ecs = "0.8"
-bevy_app = { version = "0.8", optional = true }
-bevy_utils = { version = "0.8", optional = true }
-bevy_time = { version = "0.8", optional = true }
-bevy-inspector-egui = { version = "0.12", optional = true, default-features = false }
+bevy_ecs = "0.9"
+bevy_app = { version = "0.9", optional = true }
+bevy_utils = { version = "0.9", optional = true }
+bevy_time = { version = "0.9", optional = true }
+bevy-inspector-egui = { version = "0.14", optional = true, default-features = false }
 
 [dev-dependencies]
-bevy = "0.8"
+bevy = "0.9"
 rand = "0.8.5"

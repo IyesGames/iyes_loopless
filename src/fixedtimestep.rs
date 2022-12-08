@@ -42,6 +42,7 @@ pub type TimestepName = &'static str;
 /// From within a fixed timestep system, you can also mutate the accumulator. May be useful
 /// for networking or other use cases that need to stretch time.
 #[derive(Default)]
+#[derive(Resource)]
 pub struct FixedTimesteps {
     info: HashMap<TimestepName, FixedTimestepInfo>,
     current: Option<TimestepName>,
@@ -337,6 +338,10 @@ impl Stage for FixedTimestepStage {
             timesteps.current = None;
         }
 
+        if n_steps == 0 {
+            self.store_fixedtimestepinfo(world);
+        }
+
         if n_steps == 1 {
             if self.lock_accum < self.rate_lock.0 {
                 self.lock_accum += 1;
@@ -352,7 +357,7 @@ impl Stage for FixedTimestepStage {
 
 /// Type used as a Bevy Stage Label for fixed timestep stages
 #[derive(Debug, Clone)]
-pub struct FixedTimestepStageLabel(TimestepName);
+pub struct FixedTimestepStageLabel(pub TimestepName);
 
 impl StageLabel for FixedTimestepStageLabel {
     fn as_str(&self) -> &'static str {
@@ -447,7 +452,7 @@ pub mod app {
 
         fn add_fixed_timestep_child_stage(&mut self, timestep_name: TimestepName) -> &mut App {
             let stage = self.schedule.get_stage_mut::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found");
             stage.add_stage(SystemStage::parallel());
             self
@@ -455,7 +460,7 @@ pub mod app {
 
         fn add_fixed_timestep_custom_child_stage(&mut self, timestep_name: TimestepName, custom_stage: impl Stage) -> &mut App {
             let stage = self.schedule.get_stage_mut::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found");
             stage.add_stage(custom_stage);
             self
@@ -463,7 +468,7 @@ pub mod app {
 
         fn add_fixed_timestep_system<Params>(&mut self, timestep_name: TimestepName, substage_i: usize, system: impl IntoSystemDescriptor<Params>) -> &mut App {
             let stage = self.schedule.get_stage_mut::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found");
             let substage = stage.stages.get_mut(substage_i)
                 .expect("Fixed Timestep sub-stage not found")
@@ -475,7 +480,7 @@ pub mod app {
 
         fn add_fixed_timestep_system_set(&mut self, timestep_name: TimestepName, substage_i: usize, system_set: SystemSet) -> &mut App {
             let stage = self.schedule.get_stage_mut::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found");
             let substage = stage.stages.get_mut(substage_i)
                 .expect("Fixed Timestep sub-stage not found")
@@ -487,13 +492,13 @@ pub mod app {
 
         fn get_fixed_timestep_stage(&self, timestep_name: TimestepName) -> &FixedTimestepStage {
             self.schedule.get_stage::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found")
         }
 
         fn get_fixed_timestep_stage_mut(&mut self, timestep_name: TimestepName) -> &mut FixedTimestepStage {
             self.schedule.get_stage_mut::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found")
         }
 
@@ -592,7 +597,7 @@ pub mod schedule {
 
         fn add_fixed_timestep_child_stage(&mut self, timestep_name: TimestepName) -> &mut Schedule {
             let stage = self.get_stage_mut::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found");
             stage.add_stage(SystemStage::parallel());
             self
@@ -600,7 +605,7 @@ pub mod schedule {
 
         fn add_fixed_timestep_custom_child_stage(&mut self, timestep_name: TimestepName, custom_stage: impl Stage) -> &mut Schedule {
             let stage = self.get_stage_mut::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found");
             stage.add_stage(custom_stage);
             self
@@ -608,7 +613,7 @@ pub mod schedule {
 
         fn add_fixed_timestep_system<Params>(&mut self, timestep_name: TimestepName, substage_i: usize, system: impl IntoSystemDescriptor<Params>) -> &mut Schedule {
             let stage = self.get_stage_mut::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found");
             let substage = stage.stages.get_mut(substage_i)
                 .expect("Fixed Timestep sub-stage not found")
@@ -620,7 +625,7 @@ pub mod schedule {
 
         fn add_fixed_timestep_system_set(&mut self, timestep_name: TimestepName, substage_i: usize, system_set: SystemSet) -> &mut Schedule {
             let stage = self.get_stage_mut::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found");
             let substage = stage.stages.get_mut(substage_i)
                 .expect("Fixed Timestep sub-stage not found")
@@ -632,13 +637,13 @@ pub mod schedule {
 
         fn get_fixed_timestep_stage(&self, timestep_name: TimestepName) -> &FixedTimestepStage {
             self.get_stage::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found")
         }
 
         fn get_fixed_timestep_stage_mut(&mut self, timestep_name: TimestepName) -> &mut FixedTimestepStage {
             self.get_stage_mut::<FixedTimestepStage>(
-                &FixedTimestepStageLabel(timestep_name)
+                FixedTimestepStageLabel(timestep_name)
             ).expect("Fixed Timestep Stage not found")
         }
 
