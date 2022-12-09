@@ -360,13 +360,12 @@ pub trait ConditionHelpers: Sized {
 
     /// Helper: add a condition to run if a resource was added
     fn run_if_resource_added<T: Resource>(self) -> Self {
-        self.run_if(move |res: Option<Res<T>>| {
-            if let Some(res) = res {
-                res.is_added()
-            } else {
-                false
+        self.run_if(move |res: Option<Res<T>>| res.map(|r| r.is_added()).unwrap_or(false))
             }
-        })
+
+    /// Helper: add a condition to run if a resource was changed
+    fn run_if_resource_changed<T: Resource>(self) -> Self {
+        self.run_if(move |res: Option<Res<T>>| res.map(|r| r.is_changed()).unwrap_or(false))
     }
 
     /// Helper: add a condition to run if a resource was removed
@@ -485,6 +484,11 @@ pub trait IntoConditionalSystem<Params>: IntoSystem<(), (), Params> + Sized {
     /// (provided so users don't have to type `.into_conditional()` first)
     fn run_if_resource_added<T: Resource>(self) -> ConditionalSystemDescriptor {
         self.into_conditional().run_if_resource_added::<T>()
+    }
+
+    /// (provided so users don't have to type `.into_conditional()` first)
+    fn run_if_resource_changed<T: Resource>(self) -> ConditionalSystemDescriptor {
+        self.into_conditional().run_if_resource_changed::<T>()
     }
 
     /// (provided so users don't have to type `.into_conditional()` first)
@@ -733,13 +737,12 @@ impl ConditionSet {
 
     /// Helper: add a condition to run if a resource was added
     pub fn run_if_resource_added<T: Resource>(self) -> Self {
-        self.run_if(move |res: Option<Res<T>>| {
-            if let Some(res) = res {
-                res.is_added()
-            } else {
-                false
+        self.run_if(move |res: Option<Res<T>>| res.map(|r| r.is_added()).unwrap_or(false))
             }
-        })
+
+    /// Helper: add a condition to run if a resource was changed
+    pub fn run_if_resource_changed<T: Resource>(self) -> Self {
+        self.run_if(move |res: Option<Res<T>>| res.map(|r| r.is_changed()).unwrap_or(false))
     }
 
     /// Helper: add a condition to run if a resource was removed
