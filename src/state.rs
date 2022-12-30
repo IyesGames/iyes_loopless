@@ -27,7 +27,7 @@ pub struct NextState<T>(pub T);
 
 /// A resource available to exit states, indicating what state is being transitioned to
 #[derive(Debug, Clone, PartialEq, Eq, Resource)]
-pub struct WaitingState<T>(pub T);
+pub struct QueuedState<T>(pub T);
 
 #[cfg(feature = "bevy-inspector-egui")]
 impl<T: bevy_inspector_egui::Inspectable> bevy_inspector_egui::Inspectable for CurrentState<T> {
@@ -54,7 +54,7 @@ impl<T: bevy_inspector_egui::Inspectable> bevy_inspector_egui::Inspectable for N
     }
 }
 #[cfg(feature = "bevy-inspector-egui")]
-impl<T: bevy_inspector_egui::Inspectable> bevy_inspector_egui::Inspectable for WaitingState<T> {
+impl<T: bevy_inspector_egui::Inspectable> bevy_inspector_egui::Inspectable for QueuedState<T> {
     type Attributes = T::Attributes;
     fn ui(
         &mut self,
@@ -280,12 +280,12 @@ impl<T: StateData> Stage for StateTransitionStage<T> {
             let next = world.remove_resource::<NextState<T>>();
 
             if let Some(NextState(next)) = next {
-                world.insert_resource(WaitingState(next.clone()));
+                world.insert_resource(QueuedState(next.clone()));
                 if let Some(stage) = self.exit_stages.get_mut(&current) {
                     stage.run(world);
                 }
 
-                world.remove_resource::<WaitingState<T>>();
+                world.remove_resource::<QueuedState<T>>();
                 world.insert_resource(CurrentState(next.clone()));
 
                 if let Some(stage) = self.enter_stages.get_mut(&next) {

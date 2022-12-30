@@ -33,5 +33,5 @@ pub mod prelude {
     #[cfg(feature = "states")]
     pub use crate::state::schedule::ScheduleLooplessStateExt;
     #[cfg(feature = "states")]
-    pub use crate::state::{CurrentState, NextState, StateTransitionStage, WaitingState};
+    pub use crate::state::{CurrentState, NextState, QueuedState, StateTransitionStage};
 }
