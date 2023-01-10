@@ -16,22 +16,21 @@ pub mod fixedtimestep;
 pub mod state;
 
 /// Prelude: convenient import for all the user-facing APIs provided by the crate
+/// Prelude: convenient import for all the user-facing APIs provided by the crate
 pub mod prelude {
-    pub use crate::condition::{
-        AddConditionalToSet, ConditionHelpers, ConditionSet, IntoConditionalSystem,
-    };
+    pub use crate::condition::{ConditionHelpers, IntoConditionalSystem, ConditionSet, AddConditionalToSet};
 
-    #[cfg(all(feature = "fixedtimestep", feature = "app"))]
-    pub use crate::fixedtimestep::app::AppLooplessFixedTimestepExt;
+    #[cfg(feature = "fixedtimestep")]
+    pub use crate::fixedtimestep::{FixedTimesteps, FixedTimestepStage};
     #[cfg(feature = "fixedtimestep")]
     pub use crate::fixedtimestep::schedule::ScheduleLooplessFixedTimestepExt;
-    #[cfg(feature = "fixedtimestep")]
-    pub use crate::fixedtimestep::{FixedTimestepStage, FixedTimesteps};
+    #[cfg(all(feature = "fixedtimestep", feature = "app"))]
+    pub use crate::fixedtimestep::app::AppLooplessFixedTimestepExt;
 
-    #[cfg(all(feature = "states", feature = "app"))]
-    pub use crate::state::app::AppLooplessStateExt;
-    #[cfg(feature = "states")]
-    pub use crate::state::schedule::ScheduleLooplessStateExt;
     #[cfg(feature = "states")]
     pub use crate::state::{CurrentState, NextState, QueuedState, StateTransitionStage};
+    #[cfg(feature = "states")]
+    pub use crate::state::schedule::ScheduleLooplessStateExt;
+    #[cfg(all(feature = "states", feature = "app"))]
+    pub use crate::state::app::AppLooplessStateExt;
 }
