@@ -1,3 +1,166 @@
+# This crate is now OBSOLETE!
+
+Yes! Finally! Bevy has officially merged the "Stageless Rework". Coming
+with the Bevy 0.10 release!
+
+The purpose of this crate was to provide some of the features that are part
+of Bevy 0.10 in a form that was compatible with older versions of Bevy.
+
+This repo will be archived as soon as Bevy 0.10 is released.
+
+## Migration Guide
+
+That said, here is some example code to help you migrate from `iyes_loopless`
+to Bevy 0.10 ("Stageless"):
+
+### Run Conditions
+
+Creating them is the same: make a system that returns `bool`.
+Bevy 0.10 run conditions can only have read-only data access!
+
+```rust
+fn my_condition(/* system params */) -> bool {
+    // ...
+}
+
+// loopless:
+app.add_system(
+    my_system
+        .run_if(my_good_condition)
+        .run_if_not(my_bad_condition)
+);
+
+// Bevy 0.10:
+app.add_system(
+    my_system
+        .run_if(my_good_condition)
+        .run_if(not(my_bad_condition))
+)
+```
+
+Common (predefined) run conditions:
+
+```rust
+// loopless:
+app.add_system(
+    my_system
+        .run_if_resource_exists::<GoodResource>()
+        .run_unless_resource_exists::<BadResource>()
+
+        .run_if_resource_equals(MyResource::Value)
+        .run_unless_resource_equals(MyResource2::Value)
+
+        .run_on_event::<MyEvent>()
+        .run_if_resource_added::<AnotherResource>()
+        .run_if_resource_removed::<AnotherResource>()
+);
+
+// Bevy 0.10:
+app.add_system(
+    my_system
+        .run_if(resource_exists::<GoodResource>())
+        .run_if(not(resource_exists::<BadResource>()))
+
+        // panics if resources don't exist
+        .run_if(resource_equals(MyResource::Value))
+        .run_if(not(resource_equals(MyResource2::Value)))
+
+        // does not panic if resources do not exist
+        .run_if(resource_exists_and_equals(MyResource::Value))
+        .run_if(not(resource_exists_and_equals(MyResource2::Value)))
+
+        // event, resource add/remove conditions
+        // are not predefined in Bevy! Make your own!
+        // You can copy the implementations from this crate.
+        // Bevy PR: https://github.com/bevyengine/bevy/pull/7579
+);
+```
+
+### States
+
+```rust
+// Loopless:
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+enum MyState {
+    Loading,
+    MainMenu,
+    InGame,
+}
+app.add_loopless_state(MyState::Loading);
+app.add_enter_system(MyState::MainMenu, setup_menu);
+app.add_exit_system(MyState::MainMenu, cleanup_menu);
+app.add_system(menu_buttons.run_in_state(MyState::MainMenu));
+
+// Bevy 0.10:
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Default, States)]
+enum MyState {
+    #[default]
+    Loading,
+    MainMenu,
+    InGame,
+}
+app.add_state::<MyState>();
+app.add_system_to_schedule(OnEnter(MyState::MainMenu), setup_menu);
+app.add_system_to_schedule(OnExit(MyState::MainMenu), cleanup_menu);
+app.add_system(menu_buttons.in_set(OnUpdate(MyState::MainMenu)));
+// or alternatively
+app.add_system(menu_buttons.run_if(in_state(MyState::MainMenu)));
+```
+
+### Fixed Timestep
+
+Loopless allows you to add any number of independent fixed timesteps and place
+them where you like. If you need to, you can position the stage where you like,
+relative to other stages. The default is before `CoreStage::Update`. Fixed
+timesteps use string labels as an identifier, which you use to add systems.
+
+Bevy 0.10 only has one fixed timestep. Its systems are in
+`CoreSchedule::FixedUpdate`, which is run by an exclusive system before
+`CoreSet::Update`. If you need anything else, you are on your own. Simply add
+your systems there.
+
+Loopless supports "child stages"/sub-stages, so you can apply Commands
+in the middle of the fixed update. They are identified by integer ids.
+The combination of string labels and integer ids makes the api not very
+user-friendly.
+
+Bevy 0.10 allows you to add your own Commands application points anywhere
+(regardless of fixed timestep or not) and systems are no longer organized
+into "stages". Just do that.
+
+```rust
+// Loopless:
+
+// create a new fixed timestep
+app.add_fixed_timestep(Duration::from_millis(100), "my_timestep_label");
+// create a second sub-stage so we can have a Commands application point
+app.add_fixed_timestep_child_stage("my_timestep_label");
+// add a system to the first sub-stage
+app.add_fixed_timestep_system("my_timestep_label", 0, spawn_entities);
+// add a system to the second sub-stage
+app.add_fixed_timestep_system("my_timestep_label", 1, move_entities);
+
+// Bevy 0.10:
+
+// configure the fixed timestep
+app.insert_resource(FixedTime::new(Duration::from_millis(100)));
+// add our two systems, with Commands application in between
+app.add_systems_to_schedule(
+    CoreSchedule::FixedUpdate,
+    // quick and dirty; you should probably use sets and labels in larger projects
+    // so you dont end up with many copies of `apply_system_buffers`
+    (
+        spawn_entities,
+        apply_system_buffers,
+        move_entities,
+    ).chain()
+);
+```
+
+---
+
+Here is the old README:
+
 # Composable Alternatives to Bevy's RunCriteria, States, FixedTimestep
 
 This crate offers alternatives to the Run Criteria, States, and FixedTimestep
