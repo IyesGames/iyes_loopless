@@ -78,6 +78,17 @@ app.add_system(
 
 ### States
 
+The mental model and general feature set is the same.
+
+If you need to apply state transitions elsewhere in the schedule (other than the
+default location, before `Update`), in Bevy 0.10, you can add state transition
+points by adding `apply_state_transition` systems.
+
+You don't need to do anything different for the default configuration.
+
+The `CurrentState<T>` resource is renamed to `State<T>`.
+`NextState<T>` is the same.
+
 ```rust
 // Loopless:
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -116,8 +127,8 @@ timesteps use string labels as an identifier, which you use to add systems.
 
 Bevy 0.10 only has one fixed timestep. Its systems are in
 `CoreSchedule::FixedUpdate`, which is run by an exclusive system before
-`CoreSet::Update`. If you need anything else, you are on your own. Simply add
-your systems there.
+`CoreSet::Update`. Simply add your systems there. If you need anything else, you
+are on your own.
 
 Loopless supports "child stages"/sub-stages, so you can apply Commands
 in the middle of the fixed update. They are identified by integer ids.
