@@ -69,10 +69,11 @@ app.add_system(
         .run_if(resource_exists_and_equals(MyResource::Value))
         .run_if(not(resource_exists_and_equals(MyResource2::Value)))
 
-        // event, resource add/remove conditions
-        // are not predefined in Bevy! Make your own!
-        // You can copy the implementations from this crate.
-        // Bevy PR: https://github.com/bevyengine/bevy/pull/7579
+        .run_if(on_event::<MyEvent>())
+        .run_if(resource_added::<AnotherResource>())
+        .run_if(resource_removed::<AnotherResource>())
+
+        // see: https://dev-docs.bevyengine.org/bevy/ecs/schedule/common_conditions/index.html
 );
 ```
 
