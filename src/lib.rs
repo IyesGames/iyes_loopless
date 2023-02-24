@@ -1,8 +1,8 @@
 //! Composable Alternatives to Bevy's RunCriteria, States, FixedTimestep
-//! 
+//!
 //! This crate offers alternatives to the Run Criteria, States, and FixedTimestep
 //! scheduling features currently offered by the Bevy game engine.
-//! 
+//!
 //! The ones provided by this crate do not use "looping stages", and can therefore
 //! be combined/composed together elegantly, solving some of the most annoying
 //! usability limitations of the respective APIs in Bevy.
@@ -16,6 +16,7 @@ pub mod fixedtimestep;
 pub mod state;
 
 /// Prelude: convenient import for all the user-facing APIs provided by the crate
+/// Prelude: convenient import for all the user-facing APIs provided by the crate
 pub mod prelude {
     pub use crate::condition::{ConditionHelpers, IntoConditionalSystem, ConditionSet, AddConditionalToSet};
 
@@ -27,7 +28,7 @@ pub mod prelude {
     pub use crate::fixedtimestep::app::AppLooplessFixedTimestepExt;
 
     #[cfg(feature = "states")]
-    pub use crate::state::{CurrentState, NextState, StateTransitionStage};
+    pub use crate::state::{CurrentState, NextState, QueuedState, StateTransitionStage};
     #[cfg(feature = "states")]
     pub use crate::state::schedule::ScheduleLooplessStateExt;
     #[cfg(all(feature = "states", feature = "app"))]
