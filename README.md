@@ -112,8 +112,8 @@ enum MyState {
     InGame,
 }
 app.add_state::<MyState>();
-app.add_system_to_schedule(OnEnter(MyState::MainMenu), setup_menu);
-app.add_system_to_schedule(OnExit(MyState::MainMenu), cleanup_menu);
+app.add_system(setup_menu.in_schedule(OnEnter(MyState::MainMenu)));
+app.add_system(cleanup_menu.in_schedule(OnExit(MyState::MainMenu));
 app.add_system(menu_buttons.in_set(OnUpdate(MyState::MainMenu)));
 // or alternatively
 app.add_system(menu_buttons.run_if(in_state(MyState::MainMenu)));
