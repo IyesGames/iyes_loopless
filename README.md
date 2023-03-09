@@ -112,8 +112,8 @@ enum MyState {
     InGame,
 }
 app.add_state::<MyState>();
-app.add_system_to_schedule(OnEnter(MyState::MainMenu), setup_menu);
-app.add_system_to_schedule(OnExit(MyState::MainMenu), cleanup_menu);
+app.add_system(setup_menu.in_schedule(OnEnter(MyState::MainMenu)));
+app.add_system(cleanup_menu.in_schedule(OnExit(MyState::MainMenu));
 app.add_system(menu_buttons.in_set(OnUpdate(MyState::MainMenu)));
 // or alternatively
 app.add_system(menu_buttons.run_if(in_state(MyState::MainMenu)));
@@ -157,15 +157,14 @@ app.add_fixed_timestep_system("my_timestep_label", 1, move_entities);
 // configure the fixed timestep
 app.insert_resource(FixedTime::new(Duration::from_millis(100)));
 // add our two systems, with Commands application in between
-app.add_systems_to_schedule(
-    CoreSchedule::FixedUpdate,
+app.add_systems(
     // quick and dirty; you should probably use sets and labels in larger projects
     // so you dont end up with many copies of `apply_system_buffers`
     (
         spawn_entities,
         apply_system_buffers,
         move_entities,
-    ).chain()
+    ).chain().in_schedule(CoreSchedule::FixedUpdate)
 );
 ```
 
