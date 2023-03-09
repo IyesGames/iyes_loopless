@@ -157,15 +157,14 @@ app.add_fixed_timestep_system("my_timestep_label", 1, move_entities);
 // configure the fixed timestep
 app.insert_resource(FixedTime::new(Duration::from_millis(100)));
 // add our two systems, with Commands application in between
-app.add_systems_to_schedule(
-    CoreSchedule::FixedUpdate,
+app.add_systems(
     // quick and dirty; you should probably use sets and labels in larger projects
     // so you dont end up with many copies of `apply_system_buffers`
     (
         spawn_entities,
         apply_system_buffers,
         move_entities,
-    ).chain()
+    ).chain().in_schedule(CoreSchedule::FixedUpdate)
 );
 ```
 
